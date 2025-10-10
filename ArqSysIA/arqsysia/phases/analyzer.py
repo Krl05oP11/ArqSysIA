@@ -1,227 +1,244 @@
 """
-Fase 1: Analyzer - Análisis Arquitectural
+Analyzer Phase - Fase 1 del Pipeline ArqSysIA
 
-Analiza requerimientos y genera:
-- Requerimientos funcionales y no funcionales
-- Patrón arquitectural con justificación
-- Stack tecnológico
-- Componentes principales
-- Estructura de directorios
-- Dependencias
-- MVP scope
-- Roadmap del producto
+Analiza requerimientos y genera propuesta arquitectural completa.
 """
 
 import json
 import re
 from typing import Dict, Any
 
-from .base import BasePhase
-from ..core import AnalysisResult
+from arqsysia.phases.base import BasePhase
+from arqsysia.core.state import ProjectState
+from arqsysia.clients.ollama_client import OllamaClient
 
 
 class AnalyzerPhase(BasePhase):
     """
-    Fase 1: Análisis arquitectural de requerimientos.
+    Fase 1: Análisis Arquitectural
     
-    Usa DeepSeek-R1 para realizar análisis profundo y generar
-    propuesta arquitectural completa.
+    Analiza los requerimientos del proyecto y genera:
+    - Requerimientos funcionales y no funcionales
+    - Patrón arquitectural justificado
+    - Stack tecnológico
+    - Componentes principales
+    - Estructura de directorios
+    - Dependencias
+    - Alcance del MVP
+    - Roadmap completo del producto
     """
     
-    def __init__(self, client, model: str = "deepseek-r1:32b", verbose: bool = True):
+    def __init__(
+        self,
+        ollama_client: OllamaClient,
+        model_name: str = "deepseek-r1:32b"
+    ):
         """
-        Inicializa el Analyzer.
+        Inicializa la fase de análisis.
         
         Args:
-            client: Cliente Ollama
-            model: Modelo a usar (default: deepseek-r1:32b)
-            verbose: Mostrar progreso
+            ollama_client: Cliente para interactuar con Ollama
+            model_name: Nombre del modelo LLM a usar
         """
-        super().__init__(client, model, "analyzer", verbose)
+        super().__init__(
+            name="Analyzer",
+            ollama_client=ollama_client,
+            model_name=model_name
+        )
     
-    def execute(self, requirements: str) -> Dict[str, Any]:
+    def run(self, state: ProjectState) -> ProjectState:
         """
         Ejecuta el análisis arquitectural.
         
         Args:
-            requirements: Requerimientos del sistema en texto libre
+            state: Estado del proyecto con requerimientos
             
         Returns:
-            Dict con análisis completo (convertible a AnalysisResult)
+            Estado actualizado con análisis completo
         """
-        self.log("Analizando requerimientos...", "PROGRESS")
+        self.log("Iniciando análisis arquitectural...")
         
-        # Generar análisis con el modelo
-        analysis_text = self._generate_analysis(requirements)
+        # Construir prompt
+        prompt = self._build_analysis_prompt(state)
         
-        self.log("Parseando resultados...", "PROGRESS")
-        
-        # Parsear respuesta a estructura
-        analysis_dict = self._parse_analysis(analysis_text)
-        
-        self.log(
-            f"Análisis completado: {len(analysis_dict.get('functional_requirements', []))} "
-            f"req. funcionales, stack: {analysis_dict.get('architecture_pattern', 'N/A')}",
-            "SUCCESS"
+        # Llamar al modelo
+        self.log("Consultando a DeepSeek-R1 (esto puede tomar 4-5 minutos)...")
+        response = self.ollama_client.generate(
+            model=self.model_name,
+            prompt=prompt,
+            options={
+                "temperature": 0.7,
+                "num_predict": 4096,
+            }
         )
         
-        return analysis_dict
-    
-    def _generate_analysis(self, requirements: str) -> str:
-        """Genera análisis usando el modelo."""
+        # Parsear respuesta
+        self.log("Parseando análisis...")
+        analysis = self._parse_analysis_response(response)
         
-        system_prompt = """Eres un arquitecto de software senior experto en diseño de sistemas.
-Tu tarea es analizar requerimientos y proponer arquitecturas de software robustas y bien justificadas.
+        # Guardar en el estado
+        state.set_output("analysis", analysis)
+        state.metadata["phase_1_complete"] = True
+        
+        self.log("✅ Análisis completado exitosamente")
+        return state
+    
+    def _build_analysis_prompt(self, state: ProjectState) -> str:
+        """Construye el prompt para el análisis arquitectural."""
+        
+        prompt = f"""Eres un arquitecto de software senior experto. Analiza los siguientes requerimientos y genera una propuesta arquitectural completa y profesional.
 
-IMPORTANTE:
-- Prioriza tecnologías open-source
-- Justifica todas tus decisiones arquitecturales
-- Considera escalabilidad, mantenibilidad y seguridad
-- Sé específico en las recomendaciones
-- Genera respuestas en formato JSON válido"""
+## Requerimientos del Proyecto
 
-        user_prompt = f"""Analiza los siguientes requerimientos y genera una propuesta arquitectural completa:
+**Nombre del Proyecto:** {state.project_name}
 
-REQUERIMIENTOS:
-{requirements}
+**Descripción y Requerimientos:**
+{state.original_requirements}
 
-Genera tu análisis en el siguiente formato JSON (sin markdown, solo JSON puro):
+## Tu Tarea
+
+Realiza un análisis arquitectural COMPLETO y genera un documento estructurado en formato JSON con la siguiente información:
+
+1. **Requerimientos Funcionales**: Lista de funcionalidades específicas que el sistema debe proporcionar
+2. **Requerimientos No Funcionales**: Restricciones, atributos de calidad (performance, seguridad, escalabilidad, etc.)
+3. **Patrón Arquitectural**: Propón UN patrón arquitectural apropiado (ej: Monolito MVC, Microservicios, Serverless, etc.)
+4. **Justificación Arquitectural**: Explica por qué elegiste ese patrón considerando el contexto del proyecto
+5. **Stack Tecnológico**: Propón tecnologías específicas para cada capa (frontend, backend, base de datos, etc.)
+6. **Componentes Principales**: Lista los componentes/módulos principales del sistema con sus responsabilidades
+7. **Estructura de Directorios**: Propón la estructura básica de archivos y carpetas
+8. **Dependencias**: Lista las dependencias técnicas principales (librerías, frameworks, servicios)
+9. **Alcance del MVP**: Define qué funcionalidades incluir en el MVP (Producto Mínimo Viable)
+10. **Roadmap del Producto**: Propón fases de desarrollo desde MVP hasta producto completo
+
+## IMPORTANTE - Considera el Contexto
+
+- Si el proyecto es para un **desarrollador individual**, prioriza **SIMPLICIDAD** sobre complejidad
+- Para proyectos pequeños/medianos de un solo desarrollador, un **monolito bien estructurado** suele ser mejor que microservicios
+- Solo sugiere arquitecturas complejas (microservicios, event-driven, etc.) si están **justificadas** por requisitos específicos de escala o complejidad
+- Prioriza tecnologías **open-source, maduras y bien documentadas**
+
+## Formato de Respuesta
+
+Responde ÚNICAMENTE con un objeto JSON válido, SIN bloques de código markdown, con esta estructura:
 
 {{
-  "functional_requirements": [
-    "Requerimiento funcional 1",
-    "Requerimiento funcional 2",
-    ...
-  ],
-  "non_functional_requirements": [
-    "Requerimiento no funcional 1 (rendimiento, seguridad, etc.)",
-    "Requerimiento no funcional 2",
-    ...
-  ],
-  "architecture_pattern": "Nombre del patrón arquitectural",
-  "architecture_justification": "Explicación detallada de por qué elegiste este patrón",
+  "functional_requirements": ["req1", "req2", ...],
+  "non_functional_requirements": ["req1", "req2", ...],
+  "architecture_pattern": "Nombre del patrón",
+  "architecture_justification": "Explicación detallada de por qué este patrón es apropiado...",
   "tech_stack": {{
-    "backend": "Framework/tecnología de backend",
-    "database": "Sistema de base de datos",
-    "frontend": "Framework frontend (si aplica)",
-    "otros": "Otras tecnologías necesarias"
+    "frontend": "tecnología",
+    "backend": "tecnología",
+    "database": "tecnología",
+    "otros": "..."
   }},
   "main_components": [
-    "Componente principal 1",
-    "Componente principal 2",
-    ...
+    {{
+      "name": "Nombre del componente",
+      "description": "Descripción",
+      "responsibilities": ["resp1", "resp2"]
+    }}
   ],
-  "directory_structure": "Estructura de directorios propuesta (texto plano)",
-  "dependencies": {{
-    "backend": ["dependencia1", "dependencia2"],
-    "frontend": ["dependencia1", "dependencia2"],
-    "devops": ["herramienta1", "herramienta2"]
+  "directory_structure": {{
+    "descripción": "de la estructura básica"
   }},
-  "mvp_scope": "Descripción del alcance del MVP - qué incluir en la primera versión",
-  "product_roadmap": "Roadmap del producto completo - fases después del MVP"
+  "dependencies": {{
+    "frontend": ["dep1", "dep2"],
+    "backend": ["dep1", "dep2"],
+    "devops": ["dep1", "dep2"]
+  }},
+  "mvp_scope": ["feature1", "feature2", ...],
+  "roadmap": [
+    {{
+      "phase": "MVP",
+      "duration": "X semanas/meses",
+      "description": "...",
+      "features": ["f1", "f2"]
+    }}
+  ]
 }}
 
-RECUERDA: Responde SOLO con el JSON, sin explicaciones adicionales antes o después."""
+**CRÍTICO**: 
+- NO uses bloques markdown (```json)
+- NO incluyas texto fuera del JSON
+- El JSON debe ser válido y parseable
+- Sé específico y práctico en tus recomendaciones
 
-        response = self.generate_with_retry(
-            prompt=user_prompt,
-            system=system_prompt,
-            temperature=0.3  # Baja temperatura para respuestas más consistentes
-        )
+Genera el análisis ahora:"""
         
-        return response
+        return prompt
     
-    def _parse_analysis(self, analysis_text: str) -> Dict[str, Any]:
+    def _parse_analysis_response(self, response: str) -> Dict[str, Any]:
         """
-        Parsea la respuesta del modelo a diccionario.
+        Parsea la respuesta del modelo y extrae el análisis estructurado.
         
-        Maneja:
-        - JSON puro
-        - JSON dentro de bloques <think>...</think>
-        - JSON dentro de markdown ```json...```
+        Args:
+            response: Respuesta cruda del modelo
+            
+        Returns:
+            Diccionario con el análisis estructurado
         """
-        # Remover bloques <think>...</think> de DeepSeek-R1
-        cleaned = re.sub(r'<think>.*?</think>', '', analysis_text, flags=re.DOTALL)
-        
-        # Remover bloques de markdown ```json...```
-        cleaned = re.sub(r'```json\s*', '', cleaned)
-        cleaned = re.sub(r'```\s*', '', cleaned)
-        
-        # Limpiar espacios
-        cleaned = cleaned.strip()
-        
         try:
-            # Intentar parsear como JSON
-            analysis_dict = json.loads(cleaned)
+            # Limpiar la respuesta
+            cleaned = self._clean_response(response)
+            
+            # Intentar parsear JSON
+            analysis = json.loads(cleaned)
             
             # Validar estructura mínima
             required_keys = [
-                'functional_requirements',
-                'architecture_pattern',
-                'tech_stack'
+                "functional_requirements",
+                "non_functional_requirements",
+                "architecture_pattern",
+                "tech_stack"
             ]
             
             for key in required_keys:
-                if key not in analysis_dict:
-                    self.log(f"Advertencia: Falta clave '{key}' en análisis", "WARNING")
+                if key not in analysis:
+                    self.log(f"⚠️  Advertencia: falta clave '{key}' en el análisis")
             
-            return analysis_dict
+            return analysis
             
         except json.JSONDecodeError as e:
-            self.log(f"Error parseando JSON: {e}", "ERROR")
-            self.log(f"Texto recibido: {cleaned[:500]}...", "ERROR")
+            self.log(f"❌ Error parseando JSON: {e}")
+            self.log(f"Respuesta recibida (primeros 500 chars): {response[:500]}")
             
-            # Retornar estructura mínima en caso de error
+            # Retornar análisis mínimo en caso de error
             return {
-                "functional_requirements": ["Error: No se pudo parsear respuesta"],
+                "functional_requirements": ["Error parseando respuesta"],
                 "non_functional_requirements": [],
-                "architecture_pattern": "Error",
-                "architecture_justification": "No se pudo generar análisis",
+                "architecture_pattern": "No disponible",
                 "tech_stack": {},
                 "main_components": [],
-                "directory_structure": "",
-                "dependencies": {},
-                "mvp_scope": "",
-                "product_roadmap": "",
-                "_raw_response": cleaned
+                "mvp_scope": [],
+                "roadmap": [],
+                "error": str(e),
+                "raw_response": response[:1000]
             }
     
-    def to_analysis_result(self, analysis_dict: Dict[str, Any]) -> AnalysisResult:
+    def _clean_response(self, response: str) -> str:
         """
-        Convierte diccionario a AnalysisResult.
+        Limpia la respuesta del modelo removiendo bloques <think>, markdown, etc.
         
         Args:
-            analysis_dict: Diccionario con análisis
+            response: Respuesta cruda del modelo
             
         Returns:
-            AnalysisResult estructurado
+            Respuesta limpia
         """
-        return AnalysisResult(
-            functional_requirements=analysis_dict.get('functional_requirements', []),
-            non_functional_requirements=analysis_dict.get('non_functional_requirements', []),
-            architecture_pattern=analysis_dict.get('architecture_pattern'),
-            architecture_justification=analysis_dict.get('architecture_justification'),
-            tech_stack=analysis_dict.get('tech_stack', {}),
-            main_components=analysis_dict.get('main_components', []),
-            directory_structure=analysis_dict.get('directory_structure'),
-            dependencies=analysis_dict.get('dependencies', {}),
-            mvp_scope=analysis_dict.get('mvp_scope'),
-            product_roadmap=analysis_dict.get('product_roadmap')
+        # Remover bloques <think>...</think>
+        cleaned = re.sub(
+            r'<think>.*?</think>',
+            '',
+            response,
+            flags=re.DOTALL | re.IGNORECASE
         )
-
-
-# Función helper para crear analyzer fácilmente
-def create_analyzer(client, model: str = "deepseek-r1:32b", verbose: bool = True) -> AnalyzerPhase:
-    """
-    Crea una instancia de AnalyzerPhase.
-    
-    Args:
-        client: Cliente Ollama
-        model: Modelo a usar
-        verbose: Mostrar progreso
         
-    Returns:
-        AnalyzerPhase configurado
-    """
-    return AnalyzerPhase(client, model, verbose)
-    
+        # Remover bloques de código markdown
+        cleaned = re.sub(r'```json\s*', '', cleaned)
+        cleaned = re.sub(r'```\s*', '', cleaned)
+        
+        # Remover espacios al inicio y final
+        cleaned = cleaned.strip()
+        
+        return cleaned

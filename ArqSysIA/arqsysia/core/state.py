@@ -9,7 +9,7 @@ import json
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 
@@ -107,7 +107,8 @@ class ProjectState:
     
     # Metadata adicional
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+    # Outputs genéricos de las fases
+    outputs: Dict[str, Any] = field(default_factory=dict)    
     def update_phase(self, phase: PipelinePhase):
         """Actualiza la fase actual del pipeline."""
         self.current_phase = phase.value
@@ -117,7 +118,30 @@ class ProjectState:
         """Agrega resultado de una fase."""
         self.phase_results.append(result)
         self.updated_at = datetime.now().isoformat()
+    def set_output(self, key: str, value: Any):
+        """
+        Establece un valor en los outputs del proyecto.
+        
+        Args:
+            key: Clave del output
+            value: Valor a guardar
+        """
+        self.outputs[key] = value
+        self.updated_at = datetime.now().isoformat()
     
+    def get_output(self, key: str, default: Any = None) -> Any:
+        """
+        Obtiene un valor de los outputs del proyecto.
+        
+        Args:
+            key: Clave del output
+            default: Valor por defecto si no existe
+            
+        Returns:
+            Valor del output o default
+        """
+        return self.outputs.get(key, default)
+            
     def set_analysis_result(self, analysis: AnalysisResult):
         """Establece resultado de análisis (Fase 1)."""
         self.analysis = analysis
@@ -205,16 +229,22 @@ class StateManager:
     y persistir el estado del proyecto.
     """
     
-    def __init__(self, output_dir: Path = Path("./output")):
+    def __init__(self, output_dir: Union[str, Path] = "output"):
         """
         Inicializa el StateManager.
         
         Args:
-            output_dir: Directorio donde guardar estados
+            output_dir: Directorio donde guardar los estados (puede ser str o Path)
         """
-        self.output_dir = output_dir
+        # Convertir a Path si es string
+        if isinstance(output_dir, str):
+            self.output_dir = Path(output_dir)
+        else:
+            self.output_dir = output_dir
+        
+        # Crear directorio si no existe
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.current_state: Optional[ProjectState] = None
+        self.current_state = None
     
     def create_project(
         self,
@@ -244,7 +274,8 @@ class StateManager:
     def save_state(
         self,
         state: Optional[ProjectState] = None,
-        format: str = "json"
+        format: str = "json",
+        filename: Optional[str] = None
     ) -> Path:
         """
         Guarda el estado actual.
@@ -252,6 +283,7 @@ class StateManager:
         Args:
             state: Estado a guardar (usa current_state si es None)
             format: Formato de salida ("json" o "yaml")
+            filename: Nombre del archivo (opcional)
             
         Returns:
             Path del archivo guardado
@@ -260,7 +292,11 @@ class StateManager:
         if not state:
             raise ValueError("No hay estado para guardar")
         
-        filename = f"{state.project_name}_state.{format}"
+        # Generar nombre de archivo si no se especifica
+        if filename is None:
+            safe_name = state.project_name.lower().replace(" ", "_")
+            filename = f"{safe_name}_state.{format}"
+        
         filepath = self.output_dir / filename
         
         if format == "json":
@@ -272,24 +308,34 @@ class StateManager:
         
         return filepath
     
-    def load_state(self, filepath: Path) -> ProjectState:
+    def load_state(
+        self, 
+        project_name: str,
+        format: str = "json"
+    ) -> ProjectState:
         """
-        Carga estado desde archivo.
+        Carga estado desde archivo usando el nombre del proyecto.
         
         Args:
-            filepath: Path del archivo a cargar
+            project_name: Nombre del proyecto
+            format: Formato del archivo ("json" o "yaml")
             
         Returns:
             ProjectState cargado
         """
-        suffix = filepath.suffix.lower()
+        safe_name = project_name.lower().replace(" ", "_")
+        filename = f"{safe_name}_state.{format}"
+        filepath = self.output_dir / filename
         
-        if suffix == ".json":
+        if not filepath.exists():
+            raise FileNotFoundError(f"No se encontró el archivo: {filepath}")
+        
+        if format == "json":
             state = ProjectState.load_json(filepath)
-        elif suffix in [".yaml", ".yml"]:
+        elif format in ["yaml", "yml"]:
             state = ProjectState.load_yaml(filepath)
         else:
-            raise ValueError(f"Formato no soportado: {suffix}")
+            raise ValueError(f"Formato no soportado: {format}")
         
         self.current_state = state
         return state
@@ -299,3 +345,4 @@ class StateManager:
         if self.current_state:
             return self.save_state(format=format)
         return None
+        

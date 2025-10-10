@@ -1,18 +1,19 @@
+# arqsysia/phases/__init__.py
 """
 Módulo de fases del pipeline ArqSysIA.
 
-Contiene las tres fases principales:
-- Analyzer: Análisis arquitectural
-- CodeGen: Generación de código y estructura
-- Validator: Validación y mejoras
+Cada fase es un módulo independiente que procesa el estado del proyecto.
 """
 
-from .base import BasePhase
-from .analyzer import AnalyzerPhase, create_analyzer
+from arqsysia.phases.base import BasePhase
+from arqsysia.phases.analyzer import AnalyzerPhase
+from arqsysia.phases.codegen import CodeGenPhase
+from arqsysia.phases.validator import ValidatorPhase
 
 __all__ = [
     'BasePhase',
     'AnalyzerPhase',
-    'create_analyzer',
+    'CodeGenPhase',
+    'ValidatorPhase',
 ]
 

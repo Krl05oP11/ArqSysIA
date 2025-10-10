@@ -1,0 +1,463 @@
+"""
+CodeGen Phase - Fase 2 del Pipeline ArqSysIA
+
+Genera estructura de archivos, código inicial, scripts de setup
+y documentación técnica basándose en el análisis arquitectural.
+"""
+
+import json
+import re
+from typing import Dict, Any, Optional, List
+from pathlib import Path
+
+from arqsysia.phases.base import BasePhase
+from arqsysia.core.state import ProjectState
+from arqsysia.clients.ollama_client import OllamaClient
+
+
+class CodeGenPhase(BasePhase):
+    """
+    Fase 2: Generación de Código y Estructura
+    
+    Toma el análisis arquitectural y genera:
+    - Estructura completa de archivos/directorios
+    - Código inicial de componentes clave
+    - Scripts de setup/deployment
+    - Documentación técnica
+    """
+    
+    def __init__(
+        self,
+        ollama_client: OllamaClient,
+        model_name: str = "qwen2.5-coder:32b-instruct"
+    ):
+        super().__init__(
+            name="CodeGen",
+            ollama_client=ollama_client,
+            model_name=model_name
+        )
+    
+    def run(self, state: ProjectState) -> ProjectState:
+        """
+        Ejecuta la fase de generación de código.
+        
+        Args:
+            state: Estado del proyecto con análisis completado
+            
+        Returns:
+            Estado actualizado con código generado
+        """
+        self.log("Iniciando fase de generación de código...")
+        
+        # Validar que tengamos análisis previo
+        if not state.metadata.get("phase_1_complete"):
+            raise ValueError("El análisis (Fase 1) debe completarse antes del CodeGen")
+        
+        try:
+            # 1. Generar estructura de archivos
+            self.log("Generando estructura de archivos...")
+            file_structure = self._generate_file_structure(state)
+            state.set_output("file_structure", file_structure)
+            
+            # 2. Generar código de archivos clave
+            self.log("Generando código de archivos principales...")
+            generated_files = self._generate_key_files(state)
+            state.set_output("generated_files", generated_files)
+            
+            # 3. Generar scripts de setup
+            self.log("Generando scripts de configuración...")
+            setup_scripts = self._generate_setup_scripts(state)
+            state.set_output("setup_scripts", setup_scripts)
+            
+            # 4. Generar documentación técnica
+            self.log("Generando documentación técnica...")
+            technical_docs = self._generate_technical_docs(state)
+            state.set_output("technical_documentation", technical_docs)
+            
+            # Marcar fase como completada
+            state.metadata["phase_2_complete"] = True
+            state.metadata["phase_2_duration"] = "N/A"  # Se puede agregar tracking de tiempo
+            
+            self.log("✅ Fase de generación de código completada")
+            return state
+            
+        except Exception as e:
+            self.log(f"❌ Error en CodeGen: {str(e)}")
+            raise
+    
+    def _generate_file_structure(self, state: ProjectState) -> Dict[str, Any]:
+        """
+        Genera la estructura completa de archivos y directorios.
+        """
+        prompt = self._build_file_structure_prompt(state)
+        response = self._call_model(prompt)
+        
+        # Parsear respuesta
+        structure = self._parse_file_structure_response(response)
+        return structure
+    
+    def _generate_key_files(self, state: ProjectState) -> Dict[str, str]:
+        """
+        Genera el código de los archivos más importantes.
+        """
+        prompt = self._build_key_files_prompt(state)
+        response = self._call_model(prompt)
+        
+        # Parsear respuesta
+        files = self._parse_key_files_response(response)
+        return files
+    
+    def _generate_setup_scripts(self, state: ProjectState) -> List[Dict[str, str]]:
+        """
+        Genera scripts de setup, deployment, y configuración.
+        """
+        prompt = self._build_setup_scripts_prompt(state)
+        response = self._call_model(prompt)
+        
+        # Parsear respuesta
+        scripts = self._parse_setup_scripts_response(response)
+        return scripts
+    
+    def _generate_technical_docs(self, state: ProjectState) -> Dict[str, str]:
+        """
+        Genera documentación técnica del proyecto.
+        """
+        prompt = self._build_technical_docs_prompt(state)
+        response = self._call_model(prompt)
+        
+        # Parsear respuesta
+        docs = self._parse_technical_docs_response(response)
+        return docs
+    
+    # ========== PROMPT BUILDERS ==========
+    
+    def _build_file_structure_prompt(self, state: ProjectState) -> str:
+        """Construye el prompt para generar estructura de archivos."""
+        
+        analysis = state.get_output("analysis")
+        
+        prompt = f"""Eres un arquitecto de software experto. Tu tarea es generar la estructura COMPLETA de archivos y directorios para el siguiente proyecto.
+
+## Contexto del Proyecto
+
+**Nombre:** {state.project_name}
+**Requerimientos:** {state.original_requirements[:500]}
+**Descripción:** {state.original_requirements[:500]}
+**Arquitectura:** {analysis.get('architecture_pattern', 'N/A')}
+**Stack Tecnológico:** {json.dumps(analysis.get('tech_stack', {}), indent=2)}
+
+**Componentes Principales:**
+{json.dumps(analysis.get('main_components', []), indent=2)}
+
+**Estructura Base Sugerida:**
+{json.dumps(analysis.get('directory_structure', {}), indent=2)}
+
+## Tu Tarea
+
+Genera una estructura DETALLADA de archivos y directorios que incluya:
+
+1. **Todos los directorios** necesarios (src, tests, docs, config, etc.)
+2. **Todos los archivos** importantes (incluso vacíos o con comentarios)
+3. **Archivos de configuración** (package.json, requirements.txt, docker-compose.yml, etc.)
+4. **Archivos de documentación** (README.md, CONTRIBUTING.md, etc.)
+5. **Scripts de utilidad** (build, deploy, test, etc.)
+
+## Formato de Respuesta
+
+Responde SOLO con un objeto JSON válido con la siguiente estructura:
+
+```json
+{{
+  "root": {{
+    "type": "directory",
+    "children": {{
+      "src": {{
+        "type": "directory",
+        "children": {{
+          "main.py": {{
+            "type": "file",
+            "description": "Punto de entrada de la aplicación"
+          }}
+        }}
+      }},
+      "README.md": {{
+        "type": "file",
+        "description": "Documentación principal del proyecto"
+      }}
+    }}
+  }}
+}}
+```
+
+**IMPORTANTE:**
+- NO incluyas bloques de código markdown (```json)
+- NO incluyas explicaciones fuera del JSON
+- La estructura debe ser completa y realista
+- Incluye archivos de configuración típicos del stack tecnológico elegido
+
+Genera la estructura ahora:"""
+        
+        return prompt
+    
+    def _build_key_files_prompt(self, state: ProjectState) -> str:
+        """Construye el prompt para generar archivos clave."""
+        
+        analysis = state.get_output("analysis")
+        file_structure = state.get_output("file_structure")
+        
+        prompt = f"""Eres un desarrollador experto. Tu tarea es generar el CÓDIGO INICIAL de los archivos más importantes del proyecto.
+
+## Contexto del Proyecto
+
+**Nombre:** {state.project_name}
+**Requerimientos:** {state.original_requirements[:300]}...
+**Arquitectura:** {analysis.get('architecture_pattern', 'N/A')}
+**Stack Tecnológico:** {json.dumps(analysis.get('tech_stack', {}), indent=2)}
+
+**Componentes Principales:**
+{json.dumps(analysis.get('main_components', []), indent=2)}
+
+## Archivos a Generar
+
+Genera código inicial para estos archivos clave:
+1. Archivo principal de entrada (main, app, index, etc.)
+2. Archivos de configuración principales
+3. Archivos base de componentes críticos
+4. README.md completo
+
+## Formato de Respuesta
+
+Responde SOLO con un objeto JSON válido:
+
+```json
+{{
+  "files": {{
+    "src/main.py": "# Contenido del archivo\\nimport ...\\n\\ndef main():\\n    pass",
+    "README.md": "# Título\\n\\nDescripción...",
+    "config/settings.py": "# Configuración\\n..."
+  }}
+}}
+```
+
+**IMPORTANTE:**
+- NO uses bloques markdown (```json o ```python)
+- Escapa correctamente los saltos de línea (\\n)
+- El código debe ser funcional y seguir mejores prácticas
+- Incluye comentarios explicativos
+- Usa el stack tecnológico especificado
+
+Genera los archivos ahora:"""
+        
+        return prompt
+    
+    def _build_setup_scripts_prompt(self, state: ProjectState) -> str:
+        """Construye el prompt para generar scripts de setup."""
+        
+        analysis = state.get_output("analysis")
+        
+        prompt = f"""Eres un DevOps experto. Genera scripts de configuración y deployment para el proyecto.
+
+## Contexto del Proyecto
+
+**Nombre:** {state.project_name}
+**Requerimientos:** {state.original_requirements[:300]}...
+**Stack Tecnológico:** {json.dumps(analysis.get('tech_stack', {}), indent=2)}
+**Dependencias:** {json.dumps(analysis.get('dependencies', {}), indent=2)}
+
+## Scripts Requeridos
+
+Genera los siguientes scripts:
+1. **Script de instalación** (setup.sh o install.sh)
+2. **Script de desarrollo** (dev.sh o run_dev.sh)
+3. **Script de tests** (test.sh)
+4. **Dockerfile** (si aplica)
+5. **docker-compose.yml** (si aplica)
+
+## Formato de Respuesta
+
+Responde SOLO con un objeto JSON válido:
+
+```json
+{{
+  "scripts": [
+    {{
+      "name": "setup.sh",
+      "description": "Instala dependencias del proyecto",
+      "content": "#!/bin/bash\\necho 'Instalando...'\\n...",
+      "executable": true
+    }}
+  ]
+}}
+```
+
+**IMPORTANTE:**
+- NO uses bloques markdown
+- Scripts deben ser funcionales
+- Incluye manejo de errores
+- Documenta cada paso con comentarios
+
+Genera los scripts ahora:"""
+        
+        return prompt
+    
+    def _build_technical_docs_prompt(self, state: ProjectState) -> str:
+        """Construye el prompt para generar documentación técnica."""
+        
+        analysis = state.get_output("analysis")
+        
+        prompt = f"""Eres un technical writer experto. Genera documentación técnica completa para el proyecto.
+
+## Contexto del Proyecto
+
+**Nombre:** {state.project_name}
+**Requerimientos:** {state.original_requirements[:500]}...
+**Descripción:** {state.original_requirements[:500]}
+**Arquitectura:** {analysis.get('architecture_pattern', 'N/A')}
+**Stack:** {json.dumps(analysis.get('tech_stack', {}), indent=2)}
+**Componentes:** {json.dumps(analysis.get('main_components', []), indent=2)}
+
+## Documentos Requeridos
+
+Genera:
+1. **README.md** - Introducción, instalación, uso
+2. **ARCHITECTURE.md** - Decisiones arquitecturales, diagramas en texto
+3. **API.md** - Documentación de APIs (si aplica)
+4. **CONTRIBUTING.md** - Guía para contribuidores
+
+## Formato de Respuesta
+
+Responde SOLO con un objeto JSON válido:
+
+```json
+{{
+  "documents": {{
+    "README.md": "# Contenido completo del README...",
+    "ARCHITECTURE.md": "# Arquitectura\\n\\n..."
+  }}
+}}
+```
+
+**IMPORTANTE:**
+- NO uses bloques markdown externos al contenido
+- Documentación debe ser clara y completa
+- Incluye ejemplos de código cuando sea relevante
+- Usa formato Markdown dentro del contenido
+
+Genera la documentación ahora:"""
+        
+        return prompt
+    
+    # ========== RESPONSE PARSERS ==========
+    
+    def _parse_file_structure_response(self, response: str) -> Dict[str, Any]:
+        """Parsea la respuesta de estructura de archivos."""
+        try:
+            # Limpiar respuesta
+            cleaned = self._clean_response(response)
+            
+            # Parsear JSON
+            data = json.loads(cleaned)
+            
+            # Validar estructura
+            if "root" not in data:
+                raise ValueError("Respuesta no contiene 'root'")
+            
+            return data
+            
+        except json.JSONDecodeError as e:
+            self.log(f"⚠️ Error parseando estructura de archivos: {e}")
+            self.log(f"Respuesta recibida: {response[:500]}...")
+            
+            # Retornar estructura mínima
+            return {
+                "root": {
+                    "type": "directory",
+                    "children": {
+                        "README.md": {
+                            "type": "file",
+                            "description": "Documentación principal"
+                        }
+                    }
+                }
+            }
+    
+    def _parse_key_files_response(self, response: str) -> Dict[str, str]:
+        """Parsea la respuesta de archivos clave."""
+        try:
+            cleaned = self._clean_response(response)
+            data = json.loads(cleaned)
+            
+            # Extraer archivos
+            if "files" in data:
+                return data["files"]
+            else:
+                return data
+                
+        except json.JSONDecodeError as e:
+            self.log(f"⚠️ Error parseando archivos clave: {e}")
+            return {}
+    
+    def _parse_setup_scripts_response(self, response: str) -> List[Dict[str, str]]:
+        """Parsea la respuesta de scripts de setup."""
+        try:
+            cleaned = self._clean_response(response)
+            data = json.loads(cleaned)
+            
+            if "scripts" in data:
+                return data["scripts"]
+            else:
+                return []
+                
+        except json.JSONDecodeError as e:
+            self.log(f"⚠️ Error parseando scripts: {e}")
+            return []
+    
+    def _parse_technical_docs_response(self, response: str) -> Dict[str, str]:
+        """Parsea la respuesta de documentación técnica."""
+        try:
+            cleaned = self._clean_response(response)
+            data = json.loads(cleaned)
+            
+            if "documents" in data:
+                return data["documents"]
+            else:
+                return data
+                
+        except json.JSONDecodeError as e:
+            self.log(f"⚠️ Error parseando documentación: {e}")
+            return {}
+    
+    def _clean_response(self, response: str) -> str:
+        """
+        Limpia la respuesta del modelo (remueve bloques <think>, markdown, etc.)
+        """
+        # Remover bloques <think>...</think>
+        cleaned = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Remover markdown code blocks
+        cleaned = re.sub(r'```json\s*', '', cleaned)
+        cleaned = re.sub(r'```\s*', '', cleaned)
+        
+        # Remover espacios al inicio/fin
+        cleaned = cleaned.strip()
+        
+        return cleaned
+    
+    def _call_model(self, prompt: str) -> str:
+        """
+        Llama al modelo LLM con el prompt y retorna la respuesta.
+        """
+        try:
+            response = self.ollama_client.generate(
+                model=self.model_name,
+                prompt=prompt,
+                options={
+                    "temperature": 0.7,  # Un poco de creatividad para código
+                    "num_predict": 4096,  # Suficiente para código extenso
+                }
+            )
+            return response
+            
+        except Exception as e:
+            self.log(f"❌ Error llamando al modelo: {e}")
+            raise

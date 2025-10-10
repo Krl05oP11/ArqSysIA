@@ -1,177 +1,76 @@
 """
 Clase base para todas las fases del pipeline.
 
-Proporciona funcionalidad común: logging, timing, manejo de errores.
+Proporciona funcionalidad común: logging, validación, manejo de errores.
 """
 
-import time
-from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
-from datetime import datetime
-
-from ..clients import OllamaClient, OllamaClientError
-from ..core import PhaseResult
+from typing import Any
+from arqsysia.clients.ollama_client import OllamaClient
+from arqsysia.core.state import ProjectState
 
 
-class BasePhase(ABC):
+class BasePhase:
     """
-    Clase base abstracta para fases del pipeline.
+    Clase base para todas las fases del pipeline.
     
-    Todas las fases (Analyzer, CodeGen, Validator) heredan de esta clase
-    y deben implementar el método execute().
+    Proporciona funcionalidad común como logging y validación.
+    Todas las fases (Analyzer, CodeGen, Validator) heredan de esta clase.
     """
     
     def __init__(
         self,
-        client: OllamaClient,
-        model: str,
-        phase_name: str,
-        verbose: bool = True
+        name: str,
+        ollama_client: OllamaClient,
+        model_name: str
     ):
         """
         Inicializa la fase.
         
         Args:
-            client: Cliente Ollama configurado
-            model: Nombre del modelo a usar
-            phase_name: Nombre de la fase (para logging)
-            verbose: Si True, imprime información de progreso
+            name: Nombre de la fase (ej: "Analyzer", "CodeGen", "Validator")
+            ollama_client: Cliente para interactuar con Ollama
+            model_name: Nombre del modelo LLM a usar
         """
-        self.client = client
-        self.model = model
-        self.phase_name = phase_name
-        self.verbose = verbose
-        
-        # Verificar que el modelo esté disponible
-        if not self.client.check_model_available(model):
-            raise ValueError(
-                f"Modelo '{model}' no está disponible. "
-                f"Descárgalo con: ollama pull {model}"
-            )
+        self.name = name
+        self.ollama_client = ollama_client
+        self.model_name = model_name
     
-    def log(self, message: str, level: str = "INFO"):
-        """Imprime mensaje si verbose está activado."""
-        if self.verbose:
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            prefix = {
-                "INFO": "ℹ️",
-                "SUCCESS": "✅",
-                "ERROR": "❌",
-                "WARNING": "⚠️",
-                "PROGRESS": "⏳"
-            }.get(level, "•")
-            print(f"[{timestamp}] {prefix} {message}")
-    
-    @abstractmethod
-    def execute(self, *args, **kwargs) -> Dict[str, Any]:
+    def run(self, state: ProjectState) -> ProjectState:
         """
-        Ejecuta la fase.
-        
-        Debe ser implementado por cada fase específica.
-        
-        Returns:
-            Diccionario con los resultados de la fase
-        """
-        pass
-    
-    def run(self, *args, **kwargs) -> PhaseResult:
-        """
-        Ejecuta la fase con timing y manejo de errores.
-        
-        Wrapper alrededor de execute() que agrega:
-        - Medición de tiempo
-        - Manejo de errores
-        - Logging automático
-        - Retorno de PhaseResult
-        
-        Returns:
-            PhaseResult con información de ejecución
-        """
-        self.log(f"Iniciando fase: {self.phase_name}", "PROGRESS")
-        start_time = time.time()
-        started_at = datetime.now().isoformat()
-        
-        try:
-            # Ejecutar la fase
-            output = self.execute(*args, **kwargs)
-            
-            # Calcular duración
-            duration = time.time() - start_time
-            completed_at = datetime.now().isoformat()
-            
-            self.log(
-                f"Fase '{self.phase_name}' completada en {duration:.2f}s",
-                "SUCCESS"
-            )
-            
-            return PhaseResult(
-                phase=self.phase_name,
-                status="completed",
-                started_at=started_at,
-                completed_at=completed_at,
-                duration_seconds=duration,
-                model_used=self.model,
-                output=output
-            )
-            
-        except Exception as e:
-            duration = time.time() - start_time
-            completed_at = datetime.now().isoformat()
-            
-            error_msg = f"Error en fase '{self.phase_name}': {str(e)}"
-            self.log(error_msg, "ERROR")
-            
-            return PhaseResult(
-                phase=self.phase_name,
-                status="failed",
-                started_at=started_at,
-                completed_at=completed_at,
-                duration_seconds=duration,
-                model_used=self.model,
-                error=error_msg
-            )
-    
-    def generate_with_retry(
-        self,
-        prompt: str,
-        system: Optional[str] = None,
-        temperature: float = 0.7,
-        max_retries: int = 2
-    ) -> str:
-        """
-        Genera respuesta con reintentos automáticos.
+        Ejecuta la fase. Debe ser implementado por las subclases.
         
         Args:
-            prompt: Prompt del usuario
-            system: Prompt del sistema
-            temperature: Temperatura de generación
-            max_retries: Número máximo de reintentos
+            state: Estado actual del proyecto
             
         Returns:
-            Respuesta del modelo
+            Estado actualizado después de ejecutar la fase
+        """
+        raise NotImplementedError(f"La fase {self.name} debe implementar el método run()")
+    
+    def log(self, message: str):
+        """
+        Imprime un mensaje de log con el nombre de la fase.
+        
+        Args:
+            message: Mensaje a imprimir
+        """
+        print(f"[{self.name}] {message}")
+    
+    def validate_state(self, state: ProjectState, required_outputs: list = None):
+        """
+        Valida que el estado tenga los outputs requeridos.
+        
+        Args:
+            state: Estado del proyecto
+            required_outputs: Lista de keys que deben existir en outputs
             
         Raises:
-            OllamaClientError: Si falla después de reintentos
+            ValueError: Si falta algún output requerido
         """
-        for attempt in range(max_retries + 1):
-            try:
-                if attempt > 0:
-                    self.log(f"Reintento {attempt}/{max_retries}...", "WARNING")
-                
-                response = self.client.generate(
-                    model=self.model,
-                    prompt=prompt,
-                    system=system,
-                    temperature=temperature
-                )
-                
-                return response
-                
-            except OllamaClientError as e:
-                if attempt == max_retries:
-                    raise
-                self.log(f"Intento fallido: {str(e)}", "WARNING")
-                time.sleep(2)  # Espera antes de reintentar
-        
-        raise OllamaClientError("No se pudo generar respuesta después de reintentos")
-        
+        if required_outputs:
+            for key in required_outputs:
+                if key not in state.outputs:
+                    raise ValueError(
+                        f"El estado no contiene el output requerido: '{key}'"
+                    )
+                    

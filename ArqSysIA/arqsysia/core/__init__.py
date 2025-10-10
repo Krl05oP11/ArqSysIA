@@ -1,26 +1,17 @@
+# arqsysia/core/__init__.py
 """
 Módulo core de ArqSysIA.
 
-Contiene componentes centrales: State Manager, Orchestrator, etc.
+Contiene componentes centrales: Estado, Orquestador, Configuración.
 """
 
-from .state import (
-    ProjectState,
-    StateManager,
-    PipelinePhase,
-    PhaseResult,
-    AnalysisResult,
-    GenerationResult,
-    ValidationResult,
-)
+from arqsysia.core.state import ProjectState, StateManager
+from arqsysia.core.orchestrator import PipelineOrchestrator, create_orchestrator
 
 __all__ = [
     'ProjectState',
     'StateManager',
-    'PipelinePhase',
-    'PhaseResult',
-    'AnalysisResult',
-    'GenerationResult',
-    'ValidationResult',
+    'PipelineOrchestrator',
+    'create_orchestrator',
 ]
 

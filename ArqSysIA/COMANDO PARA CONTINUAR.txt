@@ -1,0 +1,10 @@
+COMANDO PARA CONTINUAR TRABAJO CON CLAUDE
+Hola Claude, continuemos con el desarrollo del MVP v0.1 de ArqSysIA.
+
+Por favor, primero lee el PROJECT_LOG.md para entender el estado actual 
+del proyecto. Prestá especial atención a la entrada del 2025-10-08 
+(Sesión 3) donde configuramos la GPU y migramos CodeGen a usar 
+Qwen2.5-Coder-32B.
+
+Estamos listos para re-ejecutar test_codegen.py con el nuevo modelo 
+y verificar la mejora de performance.
