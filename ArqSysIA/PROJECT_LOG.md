@@ -5,6 +5,506 @@
 > **Uso:** Cada Claude debe consultar este archivo al inicio de la sesión.  
 > **Formato:** Cronológico inverso (más reciente primero).
 
+## 📅 2025-10-17 | Sesión 6 | Diseño Completo de v1.0 Iterativo
+
+### 🎯 Hitos
+- ✅ **Arquitectura v1.0 completamente diseñada**
+- ✅ **Plan de implementación detallado creado**
+- ✅ **Decisiones de diseño confirmadas con usuario**
+- ✅ **Documentación lista para comenzar desarrollo**
+- 📋 **Preparación completa para implementación**
+
+### 🏗️ Arquitectura v1.0: Sistema Iterativo
+
+#### Concepto Central
+**Transformación fundamental:** De sistema "one-shot" a **sistema iterativo profesional**
+
+**Filosofía:** "Empezar simple, evolucionar después"
+- **v1.0-alpha (Fase Simple):** 2-5 iteraciones, diff básico, solo FileStorage
+- **v1.0-stable (Fase Completa):** 10+ iteraciones, diff avanzado, SQLite opcional
+
+#### Cambios Arquitecturales Principales
+
+**1. Modelo Cíclico vs Lineal**
+```
+ANTES (MVP v0.1):
+Requirements → Analyzer → CodeGen → Validator → Output
+(una sola pasada)
+
+AHORA (v1.0):
+Requirements → [Analyzer → CodeGen → Validator] → Menú Post-Validación
+                    ↑                                      │
+                    └──────────────────────────────────────┘
+                    (múltiples ciclos con feedback)
+```
+
+**2. Componentes Nuevos**
+
+| Componente | Propósito | Estado |
+|------------|-----------|--------|
+| **Version Manager** | Gestiona historial de iteraciones | 📋 Diseñado |
+| **Decision Logger** | Memoria de decisiones arquitectónicas | 📋 Diseñado |
+| **Diff Engine** | Comparación entre versiones | 📋 Diseñado |
+| **Iterative Orchestrator** | Coordinación de ciclos iterativos | 📋 Diseñado |
+| **Storage Layer** | Persistencia pluggable (File/SQLite) | 📋 Diseñado |
+| **Enhanced Phases** | Fases con contexto previo | 📋 Diseñado |
+
+**3. Nuevos Esquemas de Datos**
+
+```python
+# ProjectState v2.0 (Enhanced)
+@dataclass
+class ProjectState:
+    # NUEVO: Metadata de iteración
+    project_name: str
+    iteration: int = 1
+    parent_iteration: Optional[int] = None
+    created_at: datetime
+    
+    # NUEVO: Feedback context
+    user_feedback: Optional[str] = None
+    previous_issues: List[Dict] = []
+    changes_from_previous: Optional[str] = None
+    
+    # EXISTENTE: mantiene compatibilidad
+    original_requirements: str
+    outputs: Dict[str, Any]
+    execution_metrics: Dict[str, float]
+```
+
+```python
+# Iteration (NUEVO)
+@dataclass
+class Iteration:
+    project_name: str
+    iteration_number: int
+    state: ProjectState
+    decisions: List[Decision]
+    created_at: datetime
+    duration_seconds: float
+    phase_durations: Dict[str, float]
+    final_scores: Dict[str, int]
+    status: str
+```
+
+```python
+# Decision (NUEVO)
+@dataclass
+class Decision:
+    iteration: int
+    phase: str
+    decision: str
+    rationale: str
+    alternatives_considered: List[str]
+    chosen_alternative: str
+    impacted_components: List[str]
+    triggered_by: str
+```
+
+```python
+# ProjectMetadata (NUEVO)
+@dataclass
+class ProjectMetadata:
+    project_name: str
+    created_at: datetime
+    last_updated: datetime
+    total_iterations: int
+    current_iteration: int
+    storage_backend: str
+    models_used: Dict[str, str]
+    total_duration_seconds: float
+    average_iteration_time: float
+```
+
+#### Storage Layer (Pluggable)
+
+**Opción A: FileStorage (Default)**
+```
+projects/
+└── mi_proyecto/
+    ├── metadata.json
+    ├── iterations/
+    │   ├── iteration_001/
+    │   │   ├── state.json
+    │   │   ├── decisions.json
+    │   │   └── outputs/
+    │   ├── iteration_002/
+    │   └── iteration_003/
+    └── decisions_log.jsonl
+```
+
+**Ventajas:** Simple, portable, git-friendly, fácil inspección
+**Desventajas:** Queries lentos con muchas iteraciones
+
+**Opción B: SQLite Storage (Futuro - Fase Completa)**
+- Queries rápidos
+- Búsquedas eficientes
+- Mejor para 50+ iteraciones
+
+### 🎨 Interfaz de Usuario Mejorada
+
+**Menú Post-Validación (NUEVO):**
+```
+╔════════════════════════════════════════════════════════╗
+║          ✅ Validación Completada - v3                 ║
+╠════════════════════════════════════════════════════════╣
+║  Scores:                                               ║
+║    • Arquitectura: 8/10 ⬆️ (+2 vs v2)                  ║
+║    • Código:       7/10 ⬆️ (+1 vs v2)                  ║
+║                                                        ║
+║  ¿Qué deseas hacer?                                    ║
+║  [1] 🔄 Regenerar código (con correcciones)            ║
+║  [2] 🏗️  Rediseñar arquitectura                        ║
+║  [3] ✅ Validar nuevamente                             ║
+║  [4] ✨ Finalizar y exportar                           ║
+║  [5] 📊 Ver historial de cambios                       ║
+║  [6] 📝 Ver decisiones tomadas                         ║
+╚════════════════════════════════════════════════════════╝
+```
+
+**Diff Viewer:**
+- Opción A: Texto (estilo git diff)
+- Opción B: Tabla comparativa
+- Usuario elige en el momento
+
+### 🔄 Feedback Loops Implementados
+
+**1. CodeGen con Feedback:**
+```python
+# Input enriquecido
+CodeGenPhase.run(
+    state=current_state,
+    previous_code=state_v1.generated_files,  # ← NUEVO
+    detected_issues=validator.issues,         # ← NUEVO
+    user_instructions="Corregir X"            # ← NUEVO
+)
+```
+
+**2. Analyzer con Feedback:**
+```python
+# Input enriquecido
+AnalyzerPhase.run(
+    state=current_state,
+    previous_design=state_v1.architecture,    # ← NUEVO
+    validation_issues=validator.issues,       # ← NUEVO
+    user_instructions="Cambiar a microservices" # ← NUEVO
+)
+```
+
+**3. Validator con Comparación:**
+```python
+# Compara con iteración previa
+ValidatorPhase.run(
+    state=current_state,
+    previous_iteration=state_v1  # ← NUEVO
+)
+# Output incluye:
+# - improvements
+# - regressions
+# - new_issues
+# - resolved_issues
+```
+
+### 📊 Decisiones de Diseño (Confirmadas con Usuario)
+
+**1. Prioridad de features:**
+- ✅ Feedback loops (más importante)
+- ✅ Historial de versiones
+- ✅ Diff viewer
+- ✅ Memoria de decisiones
+- ✅ Rollback
+
+**2. Complejidad inicial:**
+- ✅ Empezar simple (2-5 iteraciones)
+- ✅ Evolucionar después (10+ iteraciones)
+
+**3. Formato de comparación:**
+- ✅ Opción A: Texto CLI (git diff style)
+- ✅ Opción B: Tabla comparativa
+- ✅ Usuario puede elegir en el momento
+
+**4. Persistencia:**
+- ✅ Default: Archivos JSON/YAML
+- ✅ Opcional: SQLite + archivos
+- ✅ Usuario puede elegir en interfaz
+
+### 📚 Documentación Creada
+
+**1. Documento de Arquitectura v1.0** (`arqsysia-v1-architecture.md`)
+- ~450 líneas
+- Arquitectura completa del sistema
+- Esquemas de datos con código
+- Storage layer detallado
+- Componentes principales implementados
+- Prompts enriquecidos (ejemplos completos)
+- Tests y casos de uso
+- Guías de usuario
+- Mejores prácticas
+
+**2. Plan de Implementación** (`arqsysia-v1-next-steps.md`)
+- ~350 líneas
+- Plan detallado sesión por sesión (6-20)
+- Checklist completo para Sesión 6
+- Código específico a implementar
+- Criterios de éxito por sesión
+- Estructura final del proyecto
+- Flujo de trabajo Git
+
+**3. Entrada PROJECT_LOG** (esta entrada)
+- Resumen de decisiones
+- Arquitectura clave
+- Preparación para implementación
+
+### 🗂️ Estructura del Proyecto v1.0 (Planificada)
+
+```
+ArqSysIA/
+├── arqsysia/
+│   ├── core/
+│   │   ├── state.py              ← ACTUALIZAR v2.0
+│   │   ├── iteration.py          ← CREAR
+│   │   ├── decision.py           ← CREAR
+│   │   ├── metadata.py           ← CREAR
+│   │   ├── version_manager.py    ← CREAR
+│   │   ├── decision_logger.py    ← CREAR
+│   │   ├── diff_engine.py        ← CREAR
+│   │   └── iterative_orchestrator.py  ← CREAR
+│   ├── storage/                  ← CREAR CARPETA
+│   │   ├── base.py               ← CREAR
+│   │   ├── file_storage.py       ← CREAR
+│   │   └── sqlite_storage.py     (futuro)
+│   ├── phases/
+│   │   ├── analyzer.py           ← ACTUALIZAR v2.0
+│   │   ├── codegen.py            ← ACTUALIZAR v2.0
+│   │   └── validator.py          ← ACTUALIZAR v2.0
+│   ├── ui/                       ← CREAR CARPETA
+│   │   ├── iteration_menu.py     ← CREAR
+│   │   └── diff_viewer.py        ← CREAR
+│   └── utils/
+│       └── prompts_v2.py         ← CREAR
+├── tests/
+│   ├── test_new_schemas.py       ← CREAR
+│   ├── test_file_storage.py      ← CREAR
+│   ├── test_version_manager.py   ← CREAR
+│   └── integration/              ← CREAR CARPETA
+├── projects/                     ← CREAR (runtime)
+├── docs/
+│   └── v1.0/                     ← CREAR CARPETA
+│       ├── architecture.md       ← GUARDAR
+│       ├── implementation-plan.md ← GUARDAR
+│       └── user-guide.md         (futuro)
+└── main.py                       ← ACTUALIZAR v2.0
+```
+
+### 🚀 Roadmap de Implementación
+
+**Fase 1: Fundamentos (Sesiones 6-7)**
+- Actualizar esquemas de datos
+- Implementar StorageBackend + FileStorage
+- Tests básicos
+
+**Fase 2: Version Manager + Decision Logger (Sesiones 8-9)**
+- Gestión de historial
+- Memoria de decisiones
+- Tests de operaciones
+
+**Fase 3: Enhanced Phases (Sesiones 10-14)**
+- Analyzer v2.0 con feedback
+- CodeGen v2.0 con feedback
+- Validator v2.0 con comparaciones
+- Prompts enriquecidos
+
+**Fase 4: Iterative Orchestrator (Sesiones 15-16)**
+- Coordinación de iteraciones
+- Feedback loops
+- Tests de integración end-to-end
+
+**Fase 5: CLI Iterativa (Sesiones 17-18)**
+- Menús mejorados
+- Diff viewer
+- Vista de historial
+
+**Fase 6: Testing y Refinamiento (Sesiones 19-20)**
+- Suite completa de tests
+- Casos de uso reales
+- Optimización de prompts
+- **Release v1.0-alpha**
+
+**Fase 7 (Opcional - Fase Completa):**
+- SQLite Storage
+- Diff viewer avanzado
+- Features adicionales
+- **Release v1.0-stable**
+
+### ⏱️ Estimaciones de Tiempo
+
+**v1.0-alpha (Fase Simple):**
+- Sesiones: 6-20 (15 sesiones)
+- Tiempo estimado: 4-6 semanas
+- Funcionalidad: 2-5 iteraciones, diff básico, FileStorage
+
+**v1.0-stable (Fase Completa):**
+- +2-3 semanas adicionales
+- Funcionalidad: 10+ iteraciones, SQLite, diff avanzado
+
+### 📋 Checklist de Preparación (Completada)
+
+**Diseño:**
+- ✅ Arquitectura completa definida
+- ✅ Esquemas de datos diseñados
+- ✅ Storage layer especificado
+- ✅ Componentes principales diseñados
+- ✅ Interfaces de usuario diseñadas
+- ✅ Prompts enriquecidos especificados
+
+**Documentación:**
+- ✅ Documento de arquitectura creado
+- ✅ Plan de implementación creado
+- ✅ Entrada PROJECT_LOG preparada
+- ✅ Decisiones de diseño documentadas
+
+**Planificación:**
+- ✅ Roadmap detallado por sesión
+- ✅ Criterios de éxito definidos
+- ✅ Estructura de archivos planificada
+- ✅ Tests identificados
+
+### ✅ Acciones para Próxima Sesión (Sesión 7)
+
+**Antes de comenzar:**
+1. Guardar documentos en `docs/v1.0/`:
+   - `arqsysia-v1-architecture.md`
+   - `arqsysia-v1-next-steps.md`
+2. Actualizar `PROJECT_LOG.md` con esta entrada
+3. Crear rama Git: `git checkout -b feature/v1.0-iterative`
+4. Crear carpetas nuevas: `storage/`, `ui/`, `tests/integration/`, `docs/v1.0/`
+
+**Implementación (Sesión 7):**
+1. Actualizar `arqsysia/core/state.py` (ProjectState v2.0)
+2. Crear `arqsysia/core/iteration.py`
+3. Crear `arqsysia/core/decision.py`
+4. Crear `arqsysia/core/metadata.py`
+5. Crear `arqsysia/storage/base.py`
+6. Crear `tests/test_new_schemas.py`
+7. Ejecutar tests: `pytest tests/test_new_schemas.py -v`
+
+**Criterio de éxito Sesión 7:**
+```bash
+pytest tests/test_new_schemas.py -v
+# Esperado: 4/4 tests passed ✅
+```
+
+### 💡 Observaciones Importantes
+
+**1. Compatibilidad con MVP v0.1**
+- ProjectState v2.0 mantiene todos los campos existentes
+- Nuevos campos tienen valores default
+- Código existente sigue funcionando sin cambios
+
+**2. Migración Suave**
+- FileStorage es default (sin dependencias adicionales)
+- SQLite es opcional para proyectos grandes
+- Usuario puede elegir backend en runtime
+
+**3. Feedback Loops como Feature Central**
+- Permite desarrollo iterativo real
+- Usuario profesional integrado en el proceso
+- Memoria completa de decisiones
+
+**4. Documentación como Primera Ciudadana**
+- Todo cambio arquitectural documentado
+- Decisiones con razones explícitas
+- Facilita onboarding de futuros desarrolladores
+
+### 🎓 Aprendizajes de la Sesión
+
+**1. Importancia del diseño previo**
+- 2-3 horas de diseño ahorran días de refactoring
+- Documentación clara facilita implementación
+- Consenso en decisiones evita retrocesos
+
+**2. Filosofía "empezar simple"**
+- v1.0-alpha suficiente para validar concepto
+- Iteración incremental reduce riesgo
+- Usuario puede usar alpha mientras se desarrolla stable
+
+**3. Flexibilidad en persistencia**
+- FileStorage cubre 90% de casos de uso
+- SQLite solo si realmente necesario
+- Pluggable design permite migración sin pain
+
+**4. Usuario como parte del proceso**
+- Feedback loops no son opcional, son core
+- Decisiones documentadas dan contexto
+- Iteraciones múltiples = desarrollo real
+
+### 📊 Estado del Proyecto
+
+**MVP v0.1:**
+- ✅ 100% completado
+- ✅ Tag: v0.1 en Git
+- ✅ Funcional y probado
+- ✅ Pipeline lineal funcionando
+
+**v1.0 Iterativo:**
+- 📋 0% implementado
+- 📋 100% diseñado
+- 📋 100% documentado
+- 📋 Listo para comenzar desarrollo
+
+**Progreso general:**
+```
+MVP v0.1:     ████████████████████ 100%
+v1.0 design:  ████████████████████ 100%
+v1.0 code:    ░░░░░░░░░░░░░░░░░░░░   0%
+              └─ Comienza Sesión 7
+```
+
+---
+
+## 📋 INFORMACIÓN PERMANENTE (sin cambios desde Sesión 5)
+
+### 👤 Usuario
+- **Rol:** Desarrollador de Software IA
+- **Ubicación:** Libertador San Martín, Entre Ríos, Argentina
+- **Modelo de Trabajo:** Individual (workstation personal)
+
+### 🖥️ Hardware
+- **CPU:** AMD Ryzen 9 7900 (12 cores, 24 threads)
+- **RAM:** 128 GB DDR5
+- **GPU:** NVIDIA RTX 5070 Ti (16GB VRAM, Blackwell)
+- **Storage:** 2 TB NVMe
+
+### 💻 Software Base
+- **OS:** Linux
+- **IA Backend:** Ollama (localhost:11434)
+- **Python:** 3.11.7
+- **Entorno:** Virtual environment (venv)
+- **CUDA:** 12.6
+- **Driver NVIDIA:** 580.65.06
+
+### 🎯 Modelos LLM Instalados
+- `deepseek-r1:32b` (~20GB) - Analyzer
+- `qwen2.5-coder:32b-instruct` (~19GB) - CodeGen
+- `deepseek-r1:14b` (~8GB) - Validator
+
+---
+
+## 📝 DECISIONES ARQUITECTURALES VIGENTES
+
+| Decisión | Estado | Razón |
+|----------|--------|-------|
+| Pipeline tradicional (NO agentes) | ✅ Vigente | Flujo predecible, control explícito |
+| Modelos especializados por fase | ✅ Vigente | 32B/32B/14B optimal performance |
+| Infraestructura híbrida (venv + Ollama host) | ✅ Vigente | Iteración rápida, no duplicar modelos |
+| **Sistema iterativo (NUEVO)** | ✅ **Vigente** | **Desarrollo cíclico, feedback loops** |
+| **Storage pluggable (NUEVO)** | ✅ **Vigente** | **FileStorage default, SQLite opcional** |
+| Stateful sin RAG | ✅ Vigente | Suficiente para v1.0 |
+
+---
+
+**FIN DE ENTRADA - SESIÓN 6 - DISEÑO v1.0 COMPLETADO** ✅
+
 ## 📅 2025-10-10 | Sesión 5 | MVP v0.1 COMPLETADO AL 100% 🎉
 
 ### 🎯 Hitos

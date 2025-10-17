@@ -1,0 +1,2320 @@
+# ArqSysIA v1.0 - Documento de Arquitectura Iterativa
+
+## 📋 Metadata del Documento
+
+**Versión:** 1.0  
+**Fecha:** 17 de Octubre, 2025  
+**Autor:** Claude + Usuario  
+**Estado:** Diseño en progreso  
+**Propósito:** Definir arquitectura completa del sistema iterativo
+
+---
+
+## 🎯 Objetivos de v1.0
+
+### Objetivos Principales
+1. **Soporte iterativo:** Permitir múltiples ciclos de mejora en un proyecto
+2. **Feedback loops:** Regenerar código/arquitectura con contexto de iteraciones previas
+3. **Historial completo:** Almacenar y comparar versiones
+4. **Memoria de decisiones:** Registrar el "por qué" de cada cambio
+5. **Flexibilidad de persistencia:** Soportar archivos y SQLite
+
+### Filosofía de Implementación
+> "Empezar simple, evolucionar después"
+
+- **Fase Simple (v1.0-alpha):** 2-5 iteraciones, diff básico, solo archivos
+- **Fase Completa (v1.0-stable):** 10+ iteraciones, diff avanzado, SQLite opcional
+
+### Decisiones de Diseño (Respuestas del Usuario)
+
+1. **Prioridad de features:**
+   - ✅ Feedback loops (regenerar con contexto)
+   - ✅ Historial de versiones
+   - ✅ Diff viewer
+   - ✅ Memoria de decisiones
+   - ✅ Rollback
+
+2. **Complejidad inicial:** Empezar simple, evolucionar después
+
+3. **Formato de comparación:** 
+   - Opción A: Texto en CLI (como git diff)
+   - Opción B: Tabla comparativa
+   - **Usuario puede elegir en el momento**
+
+4. **Persistencia:**
+   - Opción A: Archivos JSON/YAML (default)
+   - Opción B: SQLite + archivos (opcional)
+   - **Usuario puede elegir en la interfaz**
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+### Visión General
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    ArqSysIA v1.0                             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │              CLI Iterativa (main.py)                   │ │
+│  │  • Menú principal                                      │ │
+│  │  • Navegación post-validación                          │ │
+│  │  • Diff viewer (A: texto, B: tabla)                    │ │
+│  └───────────────────────┬────────────────────────────────┘ │
+│                          │                                   │
+│  ┌───────────────────────▼────────────────────────────────┐ │
+│  │         Iterative Orchestrator                         │ │
+│  │  • run_iteration()                                     │ │
+│  │  • post_validation_menu()                              │ │
+│  │  • navigate_to_phase()                                 │ │
+│  └──┬────────────────┬────────────────┬─────────────────┘  │
+│     │                │                │                     │
+│  ┌──▼───────┐  ┌────▼─────┐  ┌──────▼────────┐           │
+│  │Analyzer  │  │ CodeGen  │  │  Validator    │           │
+│  │  v2.0    │  │   v2.0   │  │    v2.0       │           │
+│  │          │  │          │  │               │           │
+│  │+feedback │  │+feedback │  │+comparison    │           │
+│  └──────────┘  └──────────┘  └───────────────┘           │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │              Storage Layer                             │ │
+│  │  ┌──────────────────┐   ┌──────────────────┐         │ │
+│  │  │ Version Manager  │   │ Decision Logger  │         │ │
+│  │  │  • save/load     │   │  • log decision  │         │ │
+│  │  │  • list/compare  │   │  • get history   │         │ │
+│  │  │  • rollback      │   │  • search        │         │ │
+│  │  └────────┬─────────┘   └──────────────────┘         │ │
+│  │           │                                             │ │
+│  │  ┌────────▼──────────────────────────────────┐        │ │
+│  │  │       Storage Backend (Pluggable)         │        │ │
+│  │  │  ┌──────────────┐   ┌──────────────────┐ │        │ │
+│  │  │  │ FileStorage  │   │  SQLiteStorage   │ │        │ │
+│  │  │  │ (default)    │   │   (optional)     │ │        │ │
+│  │  │  └──────────────┘   └──────────────────┘ │        │ │
+│  │  └───────────────────────────────────────────┘        │ │
+│  └────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📦 Esquemas de Datos
+
+### 1. ProjectState v2.0 (Enhanced)
+
+```python
+from dataclasses import dataclass, field
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+
+@dataclass
+class ProjectState:
+    """Estado completo del proyecto en una iteración"""
+    
+    # === Metadata de iteración (NUEVO) ===
+    project_name: str
+    iteration: int = 1
+    parent_iteration: Optional[int] = None  # Para rastrear de dónde viene
+    created_at: datetime = field(default_factory=datetime.now)
+    
+    # === Input original ===
+    original_requirements: str = ""
+    
+    # === Outputs de fases (existente) ===
+    outputs: Dict[str, Any] = field(default_factory=dict)
+    # outputs["analysis"] = {...}
+    # outputs["code_generation"] = {...}
+    # outputs["validation"] = {...}
+    
+    # === Feedback context (NUEVO) ===
+    user_feedback: Optional[str] = None
+    previous_issues: List[Dict] = field(default_factory=list)
+    changes_from_previous: Optional[str] = None  # "Cambié X por Y porque..."
+    
+    # === Metadata de ejecución (existente) ===
+    execution_metrics: Dict[str, float] = field(default_factory=dict)
+    # {"analyzer_time": 312.5, "codegen_time": 803.2, ...}
+```
+
+### 2. Iteration (NUEVO)
+
+```python
+@dataclass
+class Iteration:
+    """Representa una iteración completa del proyecto"""
+    
+    project_name: str
+    iteration_number: int
+    state: ProjectState
+    decisions: List[Decision]
+    
+    # Metadata
+    created_at: datetime
+    duration_seconds: float
+    phase_durations: Dict[str, float]  # {"analyzer": 312.5, ...}
+    
+    # Scores
+    final_scores: Dict[str, int]  # {"architecture": 8, "code": 7, ...}
+    
+    # Status
+    status: str  # "completed", "in_progress", "failed"
+    
+    def to_dict(self) -> Dict:
+        """Serialización completa"""
+        return {
+            "project_name": self.project_name,
+            "iteration_number": self.iteration_number,
+            "state": asdict(self.state),
+            "decisions": [d.to_dict() for d in self.decisions],
+            "created_at": self.created_at.isoformat(),
+            "duration_seconds": self.duration_seconds,
+            "phase_durations": self.phase_durations,
+            "final_scores": self.final_scores,
+            "status": self.status
+        }
+```
+
+### 3. Decision (NUEVO)
+
+```python
+@dataclass
+class Decision:
+    """Representa una decisión arquitectónica o de código"""
+    
+    iteration: int
+    phase: str  # "analyzer", "codegen", "validator"
+    timestamp: datetime
+    
+    # La decisión
+    decision: str  # "Cambio de Monolito a Microservicios"
+    rationale: str  # "Validator detectó problemas de escalabilidad..."
+    
+    # Contexto
+    alternatives_considered: List[str]
+    chosen_alternative: str
+    
+    # Impacto
+    impacted_components: List[str]  # ["auth_service", "api_gateway"]
+    
+    # Metadata
+    triggered_by: str  # "user_feedback", "validator_issues", "manual"
+    
+    def to_dict(self) -> Dict:
+        return {
+            "iteration": self.iteration,
+            "phase": self.phase,
+            "timestamp": self.timestamp.isoformat(),
+            "decision": self.decision,
+            "rationale": self.rationale,
+            "alternatives_considered": self.alternatives_considered,
+            "chosen_alternative": self.chosen_alternative,
+            "impacted_components": self.impacted_components,
+            "triggered_by": self.triggered_by
+        }
+```
+
+### 4. ProjectMetadata (NUEVO)
+
+```python
+@dataclass
+class ProjectMetadata:
+    """Metadata global del proyecto"""
+    
+    project_name: str
+    created_at: datetime
+    last_updated: datetime
+    
+    # Iteraciones
+    total_iterations: int
+    current_iteration: int
+    
+    # Configuración
+    storage_backend: str  # "file" o "sqlite"
+    models_used: Dict[str, str]  # {"analyzer": "deepseek-r1:32b", ...}
+    
+    # Estadísticas
+    total_duration_seconds: float
+    average_iteration_time: float
+    
+    def to_dict(self) -> Dict:
+        return asdict(self)
+```
+
+---
+
+## 🗂️ Estructura de Almacenamiento
+
+### Opción A: File Storage (Default, Fase Simple)
+
+```
+projects/
+└── mi_proyecto/
+    ├── metadata.json                      # ProjectMetadata
+    ├── iterations/
+    │   ├── iteration_001/
+    │   │   ├── state.json                 # ProjectState completo
+    │   │   ├── decisions.json             # List[Decision]
+    │   │   └── outputs/
+    │   │       ├── mvp_proposal.md
+    │   │       ├── technical_architecture.md
+    │   │       └── validation_report.md
+    │   ├── iteration_002/
+    │   │   └── ...
+    │   └── iteration_003/
+    │       └── ...
+    └── decisions_log.jsonl                # Append-only log de todas las decisiones
+```
+
+**Ventajas:**
+- Simple, portable
+- Git-friendly
+- Fácil backup (cp -r projects/)
+- Fácil inspección manual
+- No requiere dependencias adicionales
+
+**Desventajas:**
+- Queries lentos (hay que leer todos los archivos)
+- Comparaciones requieren cargar N iteraciones en memoria
+
+### Opción B: SQLite Storage (Opcional, Fase Completa)
+
+```
+projects/
+└── mi_proyecto/
+    ├── database.db                        # SQLite database
+    │   ├── iterations (table)
+    │   ├── decisions (table)
+    │   └── metadata (table)
+    └── iterations/                        # Archivos grandes (states, outputs)
+        ├── iteration_001/
+        │   ├── state.json
+        │   └── outputs/
+        └── ...
+```
+
+**Schema SQLite:**
+```sql
+CREATE TABLE metadata (
+    project_name TEXT PRIMARY KEY,
+    created_at TEXT,
+    last_updated TEXT,
+    total_iterations INTEGER,
+    current_iteration INTEGER,
+    storage_backend TEXT,
+    models_used TEXT,  -- JSON serializado
+    total_duration_seconds REAL,
+    average_iteration_time REAL
+);
+
+CREATE TABLE iterations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_name TEXT,
+    iteration_number INTEGER,
+    created_at TEXT,
+    duration_seconds REAL,
+    phase_durations TEXT,  -- JSON serializado
+    final_scores TEXT,     -- JSON serializado
+    status TEXT,
+    state_file_path TEXT,  -- Referencia a archivo
+    FOREIGN KEY (project_name) REFERENCES metadata(project_name),
+    UNIQUE(project_name, iteration_number)
+);
+
+CREATE TABLE decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_name TEXT,
+    iteration INTEGER,
+    phase TEXT,
+    timestamp TEXT,
+    decision TEXT,
+    rationale TEXT,
+    alternatives_considered TEXT,  -- JSON serializado
+    chosen_alternative TEXT,
+    impacted_components TEXT,      -- JSON serializado
+    triggered_by TEXT,
+    FOREIGN KEY (project_name, iteration) 
+        REFERENCES iterations(project_name, iteration_number)
+);
+
+CREATE INDEX idx_iterations_project ON iterations(project_name);
+CREATE INDEX idx_decisions_project_iteration ON decisions(project_name, iteration);
+```
+
+**Ventajas:**
+- Queries rápidos
+- Comparaciones eficientes
+- Búsquedas por decisiones, componentes, etc.
+- Historial fácil de consultar
+
+**Desventajas:**
+- Requiere SQLite (ya viene con Python)
+- Más complejo de mantener
+- Menos portable
+
+---
+
+## 🔧 Componentes Principales
+
+### 1. Storage Backend (Pluggable)
+
+```python
+# arqsysia/storage/base.py
+
+from abc import ABC, abstractmethod
+from typing import List, Optional
+from arqsysia.core.state import ProjectState, Iteration, Decision, ProjectMetadata
+
+class StorageBackend(ABC):
+    """Interfaz abstracta para backends de almacenamiento"""
+    
+    @abstractmethod
+    def save_iteration(self, iteration: Iteration) -> None:
+        """Guarda una iteración completa"""
+        pass
+    
+    @abstractmethod
+    def load_iteration(self, project_name: str, iteration_number: int) -> Iteration:
+        """Carga una iteración específica"""
+        pass
+    
+    @abstractmethod
+    def list_iterations(self, project_name: str) -> List[Iteration]:
+        """Lista todas las iteraciones de un proyecto"""
+        pass
+    
+    @abstractmethod
+    def save_decision(self, project_name: str, decision: Decision) -> None:
+        """Guarda una decisión"""
+        pass
+    
+    @abstractmethod
+    def get_decisions(
+        self, 
+        project_name: str, 
+        iteration: Optional[int] = None
+    ) -> List[Decision]:
+        """Obtiene decisiones (todas o de una iteración específica)"""
+        pass
+    
+    @abstractmethod
+    def save_metadata(self, metadata: ProjectMetadata) -> None:
+        """Guarda metadata del proyecto"""
+        pass
+    
+    @abstractmethod
+    def load_metadata(self, project_name: str) -> ProjectMetadata:
+        """Carga metadata del proyecto"""
+        pass
+    
+    @abstractmethod
+    def delete_iteration(self, project_name: str, iteration_number: int) -> None:
+        """Elimina una iteración (para rollback)"""
+        pass
+```
+
+### 2. Version Manager
+
+```python
+# arqsysia/core/version_manager.py
+
+from typing import List, Optional, Dict
+from arqsysia.storage.base import StorageBackend
+from arqsysia.core.state import Iteration, ProjectState
+
+class VersionManager:
+    """Gestiona historial de versiones de un proyecto"""
+    
+    def __init__(
+        self, 
+        project_name: str,
+        storage: Optional[StorageBackend] = None
+    ):
+        self.project_name = project_name
+        self.storage = storage or FileStorage()
+    
+    def save_iteration(
+        self, 
+        state: ProjectState,
+        decisions: List = None,
+        duration: float = 0.0,
+        phase_durations: Dict[str, float] = None
+    ) -> Iteration:
+        """Guarda una nueva iteración"""
+        # Crear y guardar iteración
+        pass
+    
+    def get_iteration(self, iteration_number: int) -> Iteration:
+        """Obtiene una iteración específica"""
+        pass
+    
+    def list_iterations(self) -> List[Iteration]:
+        """Lista todas las iteraciones"""
+        pass
+    
+    def get_latest_iteration(self) -> Optional[Iteration]:
+        """Obtiene la última iteración"""
+        pass
+    
+    def compare_iterations(
+        self, 
+        iteration1: int, 
+        iteration2: int
+    ) -> Dict[str, any]:
+        """Compara dos iteraciones"""
+        pass
+    
+    def rollback_to(self, iteration_number: int) -> None:
+        """Elimina iteraciones posteriores a la especificada"""
+        pass
+```
+
+### 3. Decision Logger
+
+```python
+# arqsysia/core/decision_logger.py
+
+from typing import List, Optional
+from arqsysia.storage.base import StorageBackend
+from arqsysia.core.state import Decision
+
+class DecisionLogger:
+    """Gestiona el registro de decisiones arquitectónicas"""
+    
+    def __init__(
+        self,
+        project_name: str,
+        storage: Optional[StorageBackend] = None
+    ):
+        self.project_name = project_name
+        self.storage = storage or FileStorage()
+    
+    def log_decision(
+        self,
+        iteration: int,
+        phase: str,
+        decision: str,
+        rationale: str,
+        alternatives_considered: List[str],
+        chosen_alternative: str,
+        impacted_components: List[str],
+        triggered_by: str
+    ) -> Decision:
+        """Registra una nueva decisión"""
+        pass
+    
+    def get_decisions_for_iteration(self, iteration: int) -> List[Decision]:
+        """Obtiene todas las decisiones de una iteración"""
+        pass
+    
+    def get_all_decisions(self) -> List[Decision]:
+        """Obtiene todas las decisiones del proyecto"""
+        pass
+    
+    def search_decisions(self, query: str) -> List[Decision]:
+        """Busca decisiones por texto"""
+        pass
+```
+
+### 4. Iterative Orchestrator
+
+```python
+# arqsysia/core/iterative_orchestrator.py
+
+from typing import Optional
+from arqsysia.core.version_manager import VersionManager
+from arqsysia.core.decision_logger import DecisionLogger
+from arqsysia.core.state import ProjectState
+
+class IterativeOrchestrator:
+    """Orquestador que soporta iteraciones y feedback loops"""
+    
+    def __init__(self, project_name: str):
+        self.project_name = project_name
+        self.version_manager = VersionManager(project_name)
+        self.decision_logger = DecisionLogger(project_name)
+    
+    def run_iteration(
+        self,
+        iteration_number: int,
+        requirements: Optional[str] = None,
+        previous_state: Optional[ProjectState] = None,
+        user_feedback: Optional[str] = None,
+        target_phase: Optional[str] = None
+    ) -> ProjectState:
+        """
+        Ejecuta una iteración completa o parcial
+        
+        Args:
+            iteration_number: Número de iteración
+            requirements: Requerimientos (solo para iteración 1)
+            previous_state: Estado de iteración previa (para contexto)
+            user_feedback: Feedback del usuario
+            target_phase: Si es None, ejecuta todas. Si no, solo esa fase.
+        """
+        pass
+    
+    def post_validation_menu(self, state: ProjectState) -> str:
+        """
+        Muestra menú post-validación y retorna la elección del usuario
+        
+        Returns:
+            "regenerate_code" | "redesign_architecture" | 
+            "validate_again" | "finalize" | "view_history"
+        """
+        pass
+    
+    def regenerate_code(
+        self,
+        state: ProjectState,
+        user_instructions: str
+    ) -> ProjectState:
+        """Vuelve a ejecutar CodeGen con feedback"""
+        pass
+    
+    def redesign_architecture(
+        self,
+        state: ProjectState,
+        user_instructions: str
+    ) -> ProjectState:
+        """Vuelve a ejecutar Analyzer con feedback"""
+        pass
+```
+
+### 5. Enhanced Phases (v2.0)
+
+```python
+# arqsysia/phases/analyzer.py (v2.0)
+
+class AnalyzerPhase:
+    def run(
+        self,
+        state: ProjectState,
+        previous_design: Optional[Dict] = None,
+        validation_issues: Optional[List] = None,
+        user_instructions: Optional[str] = None
+    ) -> ProjectState:
+        """
+        Ejecuta análisis arquitectural con contexto de iteraciones previas
+        """
+        # Construir prompt enriquecido
+        prompt = self._build_enriched_prompt(
+            state,
+            previous_design,
+            validation_issues,
+            user_instructions
+        )
+        
+        # Ejecutar análisis
+        analysis = self._run_analysis(prompt)
+        
+        # Actualizar state
+        state.set_output("analysis", analysis)
+        
+        return state
+```
+
+```python
+# arqsysia/phases/codegen.py (v2.0)
+
+class CodeGenPhase:
+    def run(
+        self,
+        state: ProjectState,
+        previous_code: Optional[Dict] = None,
+        detected_issues: Optional[List] = None,
+        user_instructions: Optional[str] = None
+    ) -> ProjectState:
+        """
+        Genera código con contexto de iteraciones previas
+        """
+        pass
+```
+
+```python
+# arqsysia/phases/validator.py (v2.0)
+
+class ValidatorPhase:
+    def run(
+        self,
+        state: ProjectState,
+        previous_iteration: Optional[ProjectState] = None
+    ) -> ProjectState:
+        """
+        Valida con comparación contra iteración previa
+        """
+        pass
+```
+
+---
+
+## 🎨 Interfaz de Usuario (CLI Iterativa)
+
+### Menú Principal
+
+```
+╔════════════════════════════════════════════════════════╗
+║              🏗️  ArqSysIA v1.0 - Iterativo             ║
+╠════════════════════════════════════════════════════════╣
+║                                                        ║
+║  [1] Nuevo proyecto                                    ║
+║  [2] Continuar proyecto existente                      ║
+║  [3] Ver historial de proyecto                         ║
+║  [4] Comparar versiones                                ║
+║  [5] Configuración                                     ║
+║  [6] Salir                                             ║
+║                                                        ║
+╚════════════════════════════════════════════════════════╝
+```
+
+### Vista de Historial
+
+```
+╔════════════════════════════════════════════════════════╗
+║           📊 HISTORIAL - Proyecto: mi_app              ║
+╠════════════════════════════════════════════════════════╣
+║ Ver │ Fecha      │ Duración │ Scores │ Cambios        ║
+╠═════╪════════════╪══════════╪════════╪════════════════╣
+║ v3  │ 2025-10-17 │ 18.2 min │ 8/10   │ +microservices ║
+║ v2  │ 2025-10-16 │ 17.5 min │ 6/10   │ +auth, +api    ║
+║ v1  │ 2025-10-15 │ 19.8 min │ 6/10   │ inicial        ║
+╚═════╧════════════╧══════════╧════════╧════════════════╝
+
+[1] Ver diferencias entre versiones
+[2] Rollback a versión anterior
+[3] Continuar con nueva iteración
+[4] Exportar versión específica
+[5] Volver al menú principal
+```
+
+### Menú Post-Validación
+
+```
+╔════════════════════════════════════════════════════════╗
+║          ✅ Validación Completada - v3                 ║
+╠════════════════════════════════════════════════════════╣
+║                                                        ║
+║  Scores:                                               ║
+║    • Arquitectura: 8/10 ⬆️ (+2 vs v2)                  ║
+║    • Código:       7/10 ⬆️ (+1 vs v2)                  ║
+║    • Seguridad:    6/10 ➡️ (sin cambios)               ║
+║                                                        ║
+║  Issues detectados: 3                                  ║
+║  Sugerencias: 5                                        ║
+║                                                        ║
+╠════════════════════════════════════════════════════════╣
+║                                                        ║
+║  ¿Qué deseas hacer?                                    ║
+║                                                        ║
+║  [1] 🔄 Regenerar código (con correcciones)            ║
+║  [2] 🏗️  Rediseñar arquitectura                        ║
+║  [3] ✅ Validar nuevamente                             ║
+║  [4] ✨ Finalizar y exportar                           ║
+║  [5] 📊 Ver historial de cambios                       ║
+║  [6] 📝 Ver decisiones tomadas                         ║
+║                                                        ║
+╚════════════════════════════════════════════════════════╝
+```
+
+### Diff Viewer - Opción A (Texto)
+
+```
+╔════════════════════════════════════════════════════════╗
+║        🔍 Comparación: v2 → v3                         ║
+╠════════════════════════════════════════════════════════╣
+
+📐 ARQUITECTURA:
+  - Monolito MVC
+  + Microservicios
+
+🧩 COMPONENTES:
+  + auth_service (nuevo)
+  + api_gateway (nuevo)
+  + notification_service (nuevo)
+  ≈ user_service (modificado)
+
+📊 SCORES:
+  Arquitectura: 6 → 8 (+2) ✅
+  Código:       6 → 7 (+1) ✅
+  Seguridad:    6 → 6 (0)  ➡️
+
+⏱️  DURACIÓN:
+  v2: 17.5 min
+  v3: 18.2 min (+0.7 min)
+
+💡 DECISIONES:
+  [v3-001] Cambio a microservicios
+    Razón: Problemas de escalabilidad en módulo de pedidos
+    Alternativas: Optimizar monolito, arquitectura modular
+    
+╚════════════════════════════════════════════════════════╝
+```
+
+### Diff Viewer - Opción B (Tabla)
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║              🔍 Comparación Detallada: v2 vs v3                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║ Aspecto        │ v2             │ v3                │ Cambio     ║
+╠════════════════╪════════════════╪═══════════════════╪════════════╣
+║ Arquitectura   │ Monolito MVC   │ Microservicios    │ ⬆️ Mayor   ║
+║ Componentes    │ 5              │ 8                 │ +3         ║
+║ Stack Tech     │ FastAPI+Pg     │ FastAPI+Pg+Redis  │ +Redis     ║
+║ Score Arq.     │ 6/10           │ 8/10              │ +2 ✅      ║
+║ Score Código   │ 6/10           │ 7/10              │ +1 ✅      ║
+║ Score Seg.     │ 6/10           │ 6/10              │ 0 ➡️       ║
+║ Duración       │ 17.5 min       │ 18.2 min          │ +0.7 min   ║
+╚════════════════╧════════════════╧═══════════════════╧════════════╝
+
+Componentes nuevos:
+  • auth_service
+  • api_gateway  
+  • notification_service
+
+Decisiones clave:
+  1. Cambio a microservicios (escalabilidad)
+  2. Agregado Redis para caché
+  3. Separación de autenticación
+```
+
+---
+
+## 🚀 Roadmap de Implementación
+
+### Fase 1: Fundamentos (Sesiones 1-2)
+**Objetivo:** Infraestructura base para iteraciones
+
+- [ ] Actualizar esquemas de datos (ProjectState v2, Iteration, Decision, ProjectMetadata)
+- [ ] Implementar StorageBackend (abstract class)
+- [ ] Implementar FileStorage completo
+- [ ] Tests para FileStorage
+- [ ] Actualizar StateManager para soportar nuevos esquemas
+
+**Entregables:**
+- `arqsysia/core/state.py` (actualizado)
+- `arqsysia/storage/base.py` (nuevo)
+- `arqsysia/storage/file_storage.py` (nuevo)
+- `tests/test_file_storage.py` (nuevo)
+
+### Fase 2: Version Manager + Decision Logger (Sesiones 3-4)
+**Objetivo:** Gestión de historial y decisiones
+
+- [ ] Implementar VersionManager
+- [ ] Implementar DecisionLogger
+- [ ] Tests para ambos componentes
+- [ ] Integración con FileStorage
+
+**Entregables:**
+- `arqsysia/core/version_manager.py` (nuevo)
+- `arqsysia/core/decision_logger.py` (nuevo)
+- `tests/test_version_manager.py` (nuevo)
+- `tests/test_decision_logger.py` (nuevo)
+
+### Fase 3: Enhanced Phases (Sesiones 5-6)
+**Objetivo:** Fases con soporte de feedback
+
+- [ ] Actualizar AnalyzerPhase v2.0 (inputs enriquecidos)
+- [ ] Actualizar CodeGenPhase v2.0 (inputs enriquecidos)
+- [ ] Actualizar ValidatorPhase v2.0 (comparaciones)
+- [ ] Crear templates de prompts enriquecidos
+- [ ] Tests para cada fase actualizada
+
+**Entregables:**
+- `arqsysia/phases/analyzer.py` (actualizado v2.0)
+- `arqsysia/phases/codegen.py` (actualizado v2.0)
+- `arqsysia/phases/validator.py` (actualizado v2.0)
+- `arqsysia/utils/prompts_v2.py` (nuevo)
+- `tests/test_phases_v2.py` (actualizado)
+
+### Fase 4: Iterative Orchestrator (Sesiones 7-8)
+**Objetivo:** Coordinación de iteraciones y feedback loops
+
+- [ ] Implementar IterativeOrchestrator
+- [ ] Método `run_iteration()` con soporte de contexto previo
+- [ ] Método `post_validation_menu()` para navegación
+- [ ] Métodos `regenerate_code()` y `redesign_architecture()`
+- [ ] Integración con VersionManager y DecisionLogger
+- [ ] Tests de integración end-to-end
+
+**Entregables:**
+- `arqsysia/core/iterative_orchestrator.py` (nuevo)
+- `tests/test_iterative_orchestrator.py` (nuevo)
+- `tests/integration/test_full_iteration.py` (nuevo)
+
+### Fase 5: CLI Iterativa (Sesiones 9-10)
+**Objetivo:** Interfaz de usuario mejorada
+
+- [ ] Actualizar `main.py` con menú iterativo
+- [ ] Implementar vista de historial de iteraciones
+- [ ] Implementar menú post-validación
+- [ ] Diff Viewer - Opción A (texto, estilo git diff)
+- [ ] Diff Viewer - Opción B (tabla comparativa)
+- [ ] Selector de storage backend (file/sqlite)
+- [ ] Pantallas de progreso mejoradas
+
+**Entregables:**
+- `main.py` (actualizado v2.0)
+- `arqsysia/ui/diff_viewer.py` (nuevo)
+- `arqsysia/ui/iteration_menu.py` (nuevo)
+- Documentación de usuario
+
+### Fase 6: Testing y Refinamiento (Sesiones 11-12)
+**Objetivo:** Estabilización y optimización
+
+- [ ] Tests de integración completos
+- [ ] Casos de uso reales (3-5 proyectos con múltiples iteraciones)
+- [ ] Optimización de prompts basada en resultados
+- [ ] Manejo de errores robusto
+- [ ] Validación de datos
+- [ ] Performance tuning
+
+**Entregables:**
+- Suite completa de tests
+- Documentación técnica actualizada
+- Guías de uso con ejemplos
+
+### Fase 7: SQLite Storage (Opcional - Fase Completa)
+**Objetivo:** Storage backend alternativo para proyectos grandes
+
+- [ ] Implementar SQLiteStorage completo
+- [ ] Tests para SQLiteStorage
+- [ ] Migración desde FileStorage a SQLite
+- [ ] Comparación de performance
+
+**Entregables:**
+- `arqsysia/storage/sqlite_storage.py` (completo)
+- `arqsysia/utils/migration.py` (nuevo)
+- `tests/test_sqlite_storage.py` (nuevo)
+- Documentación de migración
+
+---
+
+## 📝 Prompts Enriquecidos (Ejemplos)
+
+### Analyzer v2.0 - Prompt con Contexto Previo
+
+```python
+ANALYZER_ITERATIVE_PROMPT = """
+Eres un arquitecto de software experto. Analiza los siguientes requerimientos 
+y genera un diseño arquitectural completo.
+
+# CONTEXTO DE ITERACIÓN
+Iteración actual: {iteration_number}
+{previous_context}
+
+# REQUERIMIENTOS
+{requirements}
+
+{feedback_section}
+
+{validation_issues_section}
+
+# INSTRUCCIONES ADICIONALES DEL USUARIO
+{user_instructions}
+
+# TAREA
+Genera un análisis arquitectural completo que incluya:
+1. Requerimientos funcionales y no funcionales
+2. Patrón arquitectural justificado
+3. Stack tecnológico (prioriza open-source)
+4. Componentes principales con responsabilidades
+5. Estructura de directorios
+6. Dependencias detalladas
+7. Alcance MVP
+8. Roadmap completo
+
+{iteration_specific_instructions}
+
+IMPORTANTE: 
+- Si hay un diseño previo, explica qué cambió y por qué
+- Si hay issues del validator, asegúrate de abordarlos
+- Justifica todas las decisiones arquitecturales importantes
+
+Responde en formato JSON con esta estructura:
+{{
+  "functional_requirements": [...],
+  "non_functional_requirements": [...],
+  "architecture_pattern": "...",
+  "architecture_justification": "...",
+  "tech_stack": {{...}},
+  "main_components": [...],
+  "directory_structure": {{...}},
+  "dependencies": [...],
+  "mvp_scope": {{...}},
+  "roadmap": [...],
+  "changes_from_previous": "..." // Solo si iteration > 1
+}}
+"""
+
+def build_analyzer_prompt(
+    requirements: str,
+    iteration: int,
+    previous_design: Optional[Dict] = None,
+    validation_issues: Optional[List] = None,
+    user_instructions: Optional[str] = None
+) -> str:
+    """Construye prompt enriquecido para Analyzer"""
+    
+    # Contexto previo
+    previous_context = ""
+    if previous_design and iteration > 1:
+        previous_context = f"""
+## DISEÑO PREVIO (Iteración {iteration - 1})
+Arquitectura: {previous_design.get('architecture_pattern')}
+Componentes principales: {', '.join(previous_design.get('main_components', []))}
+Stack: {previous_design.get('tech_stack', {}).get('summary', 'N/A')}
+"""
+    
+    # Issues del validator
+    validation_issues_section = ""
+    if validation_issues:
+        issues_text = "\n".join([f"- {issue['description']}" for issue in validation_issues])
+        validation_issues_section = f"""
+## ISSUES DETECTADOS EN ITERACIÓN PREVIA
+Los siguientes problemas fueron detectados y deben ser abordados:
+{issues_text}
+"""
+    
+    # Feedback del usuario
+    feedback_section = ""
+    if user_instructions:
+        feedback_section = f"""
+## FEEDBACK DEL USUARIO
+{user_instructions}
+"""
+    
+    # Instrucciones específicas de iteración
+    iteration_specific_instructions = ""
+    if iteration == 1:
+        iteration_specific_instructions = """
+Esta es la primera iteración. Enfócate en:
+- Diseño inicial sólido y bien justificado
+- Priorizar simplicidad y MVP
+- Arquitectura que pueda evolucionar
+"""
+    else:
+        iteration_specific_instructions = f"""
+Esta es la iteración {iteration}. Enfócate en:
+- Abordar los issues detectados en la iteración previa
+- Explicar claramente qué cambió y por qué
+- Mantener coherencia con decisiones previas a menos que haya razón para cambiarlas
+- Documentar el razonamiento detrás de cada cambio significativo
+"""
+    
+    return ANALYZER_ITERATIVE_PROMPT.format(
+        iteration_number=iteration,
+        previous_context=previous_context,
+        requirements=requirements,
+        feedback_section=feedback_section,
+        validation_issues_section=validation_issues_section,
+        user_instructions=user_instructions or "Ninguna",
+        iteration_specific_instructions=iteration_specific_instructions
+    )
+```
+
+### CodeGen v2.0 - Prompt con Contexto Previo
+
+```python
+CODEGEN_ITERATIVE_PROMPT = """
+Eres un ingeniero de software experto. Genera código y estructura de archivos 
+basado en el análisis arquitectural.
+
+# CONTEXTO DE ITERACIÓN
+Iteración actual: {iteration_number}
+{previous_code_context}
+
+# ANÁLISIS ARQUITECTURAL
+{architecture_summary}
+
+{detected_issues_section}
+
+{user_instructions_section}
+
+# TAREA
+Genera:
+1. Estructura completa de archivos y directorios
+2. Código inicial de archivos clave (componentes principales)
+3. Scripts de setup/deployment
+4. Documentación técnica (README, ARCHITECTURE, CONTRIBUTING)
+
+{iteration_specific_instructions}
+
+IMPORTANTE:
+- Si hay código previo, solo modifica lo necesario
+- Si hay issues detectados, corrígelos explícitamente
+- Usa mejores prácticas y patrones de diseño apropiados
+- Código debe ser funcional, no placeholders
+
+Responde en formato JSON:
+{{
+  "file_structure": {{...}},
+  "generated_files": {{
+    "path/to/file.py": "contenido completo..."
+  }},
+  "setup_scripts": {{...}},
+  "documentation": {{...}},
+  "changes_from_previous": "..." // Solo si iteration > 1
+}}
+"""
+
+def build_codegen_prompt(
+    architecture: Dict,
+    iteration: int,
+    previous_code: Optional[Dict] = None,
+    detected_issues: Optional[List] = None,
+    user_instructions: Optional[str] = None
+) -> str:
+    """Construye prompt enriquecido para CodeGen"""
+    
+    # Contexto de código previo
+    previous_code_context = ""
+    if previous_code and iteration > 1:
+        file_count = len(previous_code.get('generated_files', {}))
+        previous_code_context = f"""
+## CÓDIGO PREVIO (Iteración {iteration - 1})
+Archivos generados: {file_count}
+Estructura principal: {list(previous_code.get('file_structure', {}).keys())}
+"""
+    
+    # Issues detectados
+    detected_issues_section = ""
+    if detected_issues:
+        issues_text = "\n".join([
+            f"- {issue['type']}: {issue['description']}"
+            for issue in detected_issues
+        ])
+        detected_issues_section = f"""
+## ISSUES A CORREGIR
+Los siguientes problemas deben ser abordados en esta iteración:
+{issues_text}
+"""
+    
+    # Instrucciones del usuario
+    user_instructions_section = ""
+    if user_instructions:
+        user_instructions_section = f"""
+## INSTRUCCIONES DEL USUARIO
+{user_instructions}
+"""
+    
+    # Instrucciones específicas
+    iteration_specific_instructions = ""
+    if iteration == 1:
+        iteration_specific_instructions = """
+Primera iteración: Genera estructura completa y código base funcional.
+"""
+    else:
+        iteration_specific_instructions = f"""
+Iteración {iteration}: 
+- Mantén archivos que no necesitan cambios
+- Solo modifica/agrega lo necesario para abordar issues
+- Documenta cambios significativos en comentarios
+"""
+    
+    # Resumen de arquitectura
+    architecture_summary = f"""
+Patrón: {architecture.get('architecture_pattern')}
+Componentes: {', '.join(architecture.get('main_components', []))}
+Stack: {architecture.get('tech_stack', {}).get('summary', 'N/A')}
+"""
+    
+    return CODEGEN_ITERATIVE_PROMPT.format(
+        iteration_number=iteration,
+        previous_code_context=previous_code_context,
+        architecture_summary=architecture_summary,
+        detected_issues_section=detected_issues_section,
+        user_instructions_section=user_instructions_section,
+        iteration_specific_instructions=iteration_specific_instructions
+    )
+```
+
+### Validator v2.0 - Prompt con Comparación
+
+```python
+VALIDATOR_COMPARISON_PROMPT = """
+Eres un experto en validación de software. Analiza el diseño y código generado,
+y compara con la iteración previa si existe.
+
+# CONTEXTO
+Iteración actual: {iteration_number}
+{previous_iteration_context}
+
+# ARQUITECTURA ACTUAL
+{current_architecture}
+
+# CÓDIGO ACTUAL
+{current_code_summary}
+
+# TAREA
+Valida los siguientes aspectos:
+1. Arquitectura (inconsistencias, errores, componentes faltantes)
+2. Código (errores potenciales, code smells, estructura)
+3. Seguridad (vulnerabilidades, prácticas faltantes, riesgos)
+4. Optimizaciones (performance, escalabilidad, mantenibilidad)
+
+{comparison_instructions}
+
+Para cada aspecto, proporciona:
+- Score de 0-10
+- Lista de issues encontrados (con severidad: alta/media/baja)
+- Sugerencias de mejora concretas
+- Elementos faltantes importantes
+
+{regression_check}
+
+Responde en formato JSON:
+{{
+  "architecture_validation": {{
+    "score": 8,
+    "issues": [...],
+    "suggestions": [...],
+    "missing_elements": [...]
+  }},
+  "code_validation": {{...}},
+  "security_validation": {{...}},
+  "optimization_suggestions": {{...}},
+  "comparison_with_previous": {{  // Solo si iteration > 1
+    "improvements": [...],
+    "regressions": [...],
+    "new_issues": [...],
+    "resolved_issues": [...]
+  }}
+}}
+"""
+
+def build_validator_prompt(
+    architecture: Dict,
+    code: Dict,
+    iteration: int,
+    previous_state: Optional[ProjectState] = None
+) -> str:
+    """Construye prompt enriquecido para Validator"""
+    
+    # Contexto de iteración previa
+    previous_iteration_context = ""
+    comparison_instructions = ""
+    regression_check = ""
+    
+    if previous_state and iteration > 1:
+        prev_scores = previous_state.outputs.get("validation", {}).get("scores", {})
+        previous_iteration_context = f"""
+## ITERACIÓN PREVIA ({iteration - 1})
+Scores previos:
+- Arquitectura: {prev_scores.get('architecture', 'N/A')}/10
+- Código: {prev_scores.get('code', 'N/A')}/10
+- Seguridad: {prev_scores.get('security', 'N/A')}/10
+
+Issues previos: {len(previous_state.outputs.get("validation", {}).get("issues", []))}
+"""
+        
+        comparison_instructions = """
+## COMPARACIÓN REQUERIDA
+Compara esta iteración con la previa y señala:
+- Mejoras implementadas
+- Nuevos problemas introducidos
+- Issues resueltos de la iteración anterior
+- Regresiones (cosas que empeoraron)
+"""
+        
+        regression_check = """
+IMPORTANTE: Verifica específicamente si hubo regresiones.
+Si la iteración actual tiene scores menores o más issues que la previa,
+explica por qué y si está justificado.
+"""
+    
+    # Resumen de arquitectura actual
+    current_architecture = f"""
+Patrón: {architecture.get('architecture_pattern')}
+Componentes: {len(architecture.get('main_components', []))}
+Stack: {architecture.get('tech_stack', {}).get('summary', 'N/A')}
+"""
+    
+    # Resumen de código actual
+    file_count = len(code.get('generated_files', {}))
+    current_code_summary = f"""
+Archivos generados: {file_count}
+Estructura: {len(code.get('file_structure', {}))} directorios principales
+"""
+    
+    return VALIDATOR_COMPARISON_PROMPT.format(
+        iteration_number=iteration,
+        previous_iteration_context=previous_iteration_context,
+        current_architecture=current_architecture,
+        current_code_summary=current_code_summary,
+        comparison_instructions=comparison_instructions,
+        regression_check=regression_check
+    )
+```
+
+---
+
+## 🧪 Tests y Casos de Uso
+
+### Test: Iteración Simple (2 iteraciones)
+
+```python
+# tests/integration/test_simple_iteration.py
+
+def test_simple_two_iteration_flow():
+    """
+    Test: Flujo básico de 2 iteraciones
+    - Iteración 1: Diseño inicial
+    - Iteración 2: Mejora basada en validator
+    """
+    
+    project_name = "test_blog"
+    requirements = "Blog personal con sistema de comentarios"
+    
+    # Iteración 1
+    orchestrator = IterativeOrchestrator(project_name)
+    state_v1 = orchestrator.run_iteration(
+        iteration_number=1,
+        requirements=requirements
+    )
+    
+    assert state_v1.iteration == 1
+    assert "analysis" in state_v1.outputs
+    assert "code_generation" in state_v1.outputs
+    assert "validation" in state_v1.outputs
+    
+    # Simular feedback del usuario basado en validator
+    issues = state_v1.outputs["validation"]["issues"]
+    user_feedback = "Agregar autenticación de usuarios basada en los issues detectados"
+    
+    # Iteración 2
+    state_v2 = orchestrator.run_iteration(
+        iteration_number=2,
+        previous_state=state_v1,
+        user_feedback=user_feedback
+    )
+    
+    assert state_v2.iteration == 2
+    assert state_v2.parent_iteration == 1
+    assert state_v2.user_feedback == user_feedback
+    
+    # Verificar que hay mejoras
+    scores_v1 = state_v1.outputs["validation"]["scores"]
+    scores_v2 = state_v2.outputs["validation"]["scores"]
+    
+    assert scores_v2["architecture"] >= scores_v1["architecture"]
+    
+    # Verificar que se guardaron ambas iteraciones
+    version_manager = VersionManager(project_name)
+    iterations = version_manager.list_iterations()
+    
+    assert len(iterations) == 2
+    assert iterations[0].iteration_number == 1
+    assert iterations[1].iteration_number == 2
+```
+
+### Test: Comparación entre Iteraciones
+
+```python
+# tests/test_version_manager.py
+
+def test_compare_iterations():
+    """Test: Comparación de dos iteraciones"""
+    
+    project_name = "test_compare"
+    version_manager = VersionManager(project_name)
+    
+    # Crear dos iteraciones mock
+    state_v1 = create_mock_state(iteration=1, arch="monolito")
+    state_v2 = create_mock_state(iteration=2, arch="microservicios")
+    
+    version_manager.save_iteration(state_v1, [], 1000, {})
+    version_manager.save_iteration(state_v2, [], 1200, {})
+    
+    # Comparar
+    comparison = version_manager.compare_iterations(1, 2)
+    
+    assert comparison["architecture_changed"]["changed"] == True
+    assert comparison["architecture_changed"]["previous"] == "monolito"
+    assert comparison["architecture_changed"]["current"] == "microservicios"
+    
+    assert "components_changed" in comparison
+    assert "scores_diff" in comparison
+```
+
+### Test: Rollback
+
+```python
+# tests/test_version_manager.py
+
+def test_rollback():
+    """Test: Rollback a iteración anterior"""
+    
+    project_name = "test_rollback"
+    version_manager = VersionManager(project_name)
+    
+    # Crear 3 iteraciones
+    for i in range(1, 4):
+        state = create_mock_state(iteration=i)
+        version_manager.save_iteration(state, [], 1000, {})
+    
+    # Verificar que hay 3
+    assert len(version_manager.list_iterations()) == 3
+    
+    # Rollback a v2
+    version_manager.rollback_to(2)
+    
+    # Verificar que solo quedan 2
+    iterations = version_manager.list_iterations()
+    assert len(iterations) == 2
+    assert iterations[-1].iteration_number == 2
+    
+    # Verificar que metadata se actualizó
+    metadata = version_manager.storage.load_metadata(project_name)
+    assert metadata.current_iteration == 2
+    assert metadata.total_iterations == 2
+```
+
+### Caso de Uso: E-commerce con 3 Iteraciones
+
+```python
+# tests/integration/test_ecommerce_case.py
+
+def test_ecommerce_three_iterations():
+    """
+    Caso de uso completo: E-commerce con 3 iteraciones
+    
+    v1: Diseño inicial monolítico
+    v2: Agregar sistema de pagos (feedback usuario)
+    v3: Migrar a microservicios (basado en validator)
+    """
+    
+    project_name = "ecommerce_test"
+    orchestrator = IterativeOrchestrator(project_name)
+    
+    # === ITERACIÓN 1: Diseño inicial ===
+    requirements = """
+    E-commerce de productos electrónicos con:
+    - Catálogo de productos
+    - Carrito de compras
+    - Sistema de usuarios
+    """
+    
+    state_v1 = orchestrator.run_iteration(
+        iteration_number=1,
+        requirements=requirements
+    )
+    
+    assert state_v1.outputs["analysis"]["architecture_pattern"] == "Monolito MVC"
+    
+    # === ITERACIÓN 2: Agregar pagos ===
+    user_feedback_v2 = """
+    Necesito agregar:
+    - Integración con Stripe para pagos
+    - Sistema de órdenes
+    - Notificaciones por email
+    """
+    
+    state_v2 = orchestrator.run_iteration(
+        iteration_number=2,
+        previous_state=state_v1,
+        user_feedback=user_feedback_v2
+    )
+    
+    # Verificar que se agregaron componentes
+    components_v2 = state_v2.outputs["analysis"]["main_components"]
+    assert "payment_service" in components_v2 or "PaymentService" in str(components_v2)
+    
+    # === ITERACIÓN 3: Microservicios ===
+    # Validator detectó problemas de escalabilidad
+    issues_v2 = state_v2.outputs["validation"]["issues"]
+    scalability_issues = [i for i in issues_v2 if "escalabilidad" in i["description"].lower()]
+    
+    assert len(scalability_issues) > 0  # Debe haber detectado issues
+    
+    user_feedback_v3 = """
+    Basado en los issues de escalabilidad, migrar a arquitectura de microservicios.
+    Separar: catálogo, usuarios, órdenes, pagos.
+    """
+    
+    state_v3 = orchestrator.run_iteration(
+        iteration_number=3,
+        previous_state=state_v2,
+        user_feedback=user_feedback_v3
+    )
+    
+    assert state_v3.outputs["analysis"]["architecture_pattern"] == "Microservicios"
+    
+    # Verificar mejora en scores
+    scores_v2 = state_v2.outputs["validation"]["scores"]
+    scores_v3 = state_v3.outputs["validation"]["scores"]
+    
+    assert scores_v3["architecture"] > scores_v2["architecture"]
+    
+    # === VERIFICAR HISTORIAL ===
+    version_manager = VersionManager(project_name)
+    iterations = version_manager.list_iterations()
+    
+    assert len(iterations) == 3
+    
+    # Comparar v1 vs v3
+    comparison = version_manager.compare_iterations(1, 3)
+    
+    assert comparison["architecture_changed"]["changed"] == True
+    assert len(comparison["decisions_between"]) >= 2  # Al menos 2 decisiones tomadas
+```
+
+---
+
+## 📚 Documentación de Usuario
+
+### Guía Rápida: Primer Proyecto Iterativo
+
+```markdown
+# Guía Rápida: Tu Primer Proyecto Iterativo en ArqSysIA v1.0
+
+## Paso 1: Crear Nuevo Proyecto
+
+```bash
+cd ~/Projects/ArqSysIA
+source venv/bin/activate
+python main.py
+```
+
+Selecciona: `[1] Nuevo proyecto`
+
+## Paso 2: Iteración 1 - Diseño Inicial
+
+- Ingresa nombre del proyecto: `mi_tienda_online`
+- Ingresa requerimientos:
+  ```
+  Tienda online de ropa con:
+  - Catálogo de productos con filtros
+  - Carrito de compras
+  - Sistema de usuarios
+  - Proceso de checkout
+  ```
+
+- Espera ~20 minutos (Analyzer → CodeGen → Validator)
+
+## Paso 3: Revisar Resultados v1
+
+Al finalizar, verás:
+```
+╔════════════════════════════════════════════════════════╗
+║          ✅ Validación Completada - v1                 ║
+╠════════════════════════════════════════════════════════╣
+║  Scores:                                               ║
+║    • Arquitectura: 7/10                                ║
+║    • Código:       6/10                                ║
+║    • Seguridad:    5/10                                ║
+║                                                        ║
+║  Issues detectados: 5                                  ║
+╚════════════════════════════════════════════════════════╝
+```
+
+## Paso 4: Decidir Próxima Acción
+
+Opciones en el menú post-validación:
+- `[1]` Regenerar código con correcciones
+- `[2]` Rediseñar arquitectura
+- `[4]` Finalizar (si estás satisfecho)
+
+Ejemplo: Selecciona `[1]` para mejorar el código
+
+## Paso 5: Iteración 2 - Mejora de Código
+
+Ingresa tus instrucciones:
+```
+Corrige los issues de seguridad detectados:
+- Agregar validación de inputs
+- Implementar autenticación JWT
+- Sanitizar queries SQL
+```
+
+Espera ~15 minutos (solo CodeGen + Validator)
+
+## Paso 6: Comparar Versiones
+
+Después de v2, selecciona: `[5] Ver historial de cambios`
+
+Verás comparación detallada v1 vs v2
+
+## Paso 7: Exportar Documentación
+
+Cuando estés satisfecho, selecciona: `[4] Finalizar y exportar`
+
+Los documentos estarán en: `output/mi_tienda_online/`
+```
+
+---
+
+## 🔒 Consideraciones de Seguridad y Privacidad
+
+### Datos Locales
+- ✅ Todo el procesamiento es local
+- ✅ No se envían datos a servidores externos
+- ✅ Información de clientes permanece privada
+- ✅ Modelos LLM ejecutan localmente (Ollama)
+
+### Almacenamiento
+- ✅ Archivos en `projects/` con permisos de usuario
+- ✅ SQLite database (si se usa) con permisos restringidos
+- ✅ No se almacenan credenciales o datos sensibles
+- ✅ Git-friendly: fácil agregar a `.gitignore` si es necesario
+
+### Backups
+- ✅ Estructura de archivos permite backups simples
+- ✅ Rollback permite recuperar versiones anteriores
+- ✅ Exportación de proyectos completos
+
+---
+
+## 🎓 Mejores Prácticas
+
+### Cuándo Crear Nueva Iteración
+
+**Crea nueva iteración cuando:**
+- ✅ El validator detecta issues importantes
+- ✅ Necesitas cambiar arquitectura significativamente
+- ✅ Agregas funcionalidades nuevas importantes
+- ✅ Quieres experimentar con alternativas
+
+**NO creates nueva iteración para:**
+- ❌ Cambios menores de código (typos, formateo)
+- ❌ Ajustes de documentación
+- ❌ Cambios que no afectan arquitectura o componentes
+
+### Cómo Escribir Buen Feedback
+
+**Bueno:**
+```
+Basado en el issue #3 de escalabilidad, necesito:
+- Migrar a arquitectura de microservicios
+- Separar módulos: auth, products, orders
+- Agregar Redis para caché
+- Implementar event-driven communication
+```
+
+**Malo:**
+```
+Mejorar todo
+```
+
+### Usar Decisiones para Documentar
+
+Cada decisión importante debe tener:
+- ✅ Razón clara (por qué se tomó)
+- ✅ Alternativas consideradas
+- ✅ Impacto en componentes
+
+Ejemplo:
+```
+Decisión: Cambio a microservicios
+Razón: Problemas de escalabilidad en módulo de pedidos (>10s response time)
+Alternativas:
+  - Optimizar monolito con caché
+  - Arquitectura modular sin microservicios
+Elegida: Microservicios
+  - Permite escalar solo módulo problemático
+  - Mejor aislamiento de fallos
+  - Más complejo pero justificado por crecimiento esperado
+```
+
+---
+
+## 🔮 Futuras Mejoras (Post v1.0)
+
+### Features Avanzados
+- [ ] Interfaz gráfica (Electron/Tauri)
+- [ ] Integración con Git (commits automáticos por iteración)
+- [ ] Exportación a formatos adicionales (PDF, HTML)
+- [ ] Dashboard de métricas del proyecto
+- [ ] Análisis de múltiples proyectos
+- [ ] Comparación entre proyectos diferentes
+
+### Optimizaciones
+- [ ] Caché de análisis parciales
+- [ ] Paralelización de fases (si es posible)
+- [ ] Modelos más pequeños para tareas simples
+- [ ] Prompt compression
+
+### Integraciones
+- [ ] Jira/Linear (import/export de issues)
+- [ ] GitHub Projects
+- [ ] Notion/Confluence (export de decisiones)
+- [ ] Slack/Discord (notificaciones)
+
+---
+
+## 📞 Contacto y Soporte
+
+**Proyecto:** ArqSysIA v1.0  
+**Ubicación:** Libertador San Martín, Entre Ríos, Argentina  
+**GitHub:** (Por definir)  
+**Documentación:** `/docs`  
+**Issues:** GitHub Issues (cuando esté disponible)
+
+---
+
+## 📋 Checklist de Implementación v1.0-alpha
+
+### Fase Simple (Objetivo: 2-5 iteraciones funcionales)
+
+- [ ] **Esquemas de datos**
+  - [ ] ProjectState v2.0
+  - [ ] Iteration
+  - [ ] Decision
+  - [ ] ProjectMetadata
+
+- [ ] **Storage**
+  - [ ] StorageBackend (abstract)
+  - [ ] FileStorage (completo)
+  - [ ] Tests de FileStorage
+
+- [ ] **Version Manager**
+  - [ ] Implementación completa
+  - [ ] Tests unitarios
+  - [ ] Comparación básica entre iteraciones
+
+- [ ] **Decision Logger**
+  - [ ] Implementación completa
+  - [ ] Tests unitarios
+  - [ ] Búsqueda de decisiones
+
+- [ ] **Enhanced Phases**
+  - [ ] Analyzer v2.0 con feedback
+  - [ ] CodeGen v2.0 con feedback
+  - [ ] Validator v2.0 con comparación
+  - [ ] Prompts enriquecidos
+
+- [ ] **Iterative Orchestrator**
+  - [ ] run_iteration()
+  - [ ] post_validation_menu()
+  - [ ] regenerate_code()
+  - [ ] redesign_architecture()
+
+- [ ] **CLI Iterativa**
+  - [ ] Menú principal actualizado
+  - [ ] Vista de historial
+  - [ ] Menú post-validación
+  - [ ] Diff viewer (texto y tabla)
+  - [ ] Selector de storage backend
+
+- [ ] **Tests de Integración**
+  - [ ] Flujo de 2 iteraciones
+  - [ ] Flujo de 3 iteraciones
+  - [ ] Comparación entre versiones
+  - [ ] Rollback
+  - [ ] Caso de uso completo (e-commerce)
+
+- [ ] **Documentación**
+  - [ ] Guía de usuario
+  - [ ] Guía de desarrollo
+  - [ ] Ejemplos de uso
+  - [ ] API reference
+
+---
+
+## 🔧 Detalles de Implementación Técnicos
+
+### Manejo de Context Window
+
+**Problema:** Los modelos tienen límites de context window (~128k tokens). Con múltiples iteraciones, el contexto puede crecer demasiado.
+
+**Solución:**
+```python
+def prepare_context_for_llm(
+    current_requirements: str,
+    previous_state: Optional[ProjectState],
+    validation_issues: List[Dict],
+    user_feedback: str,
+    max_tokens: int = 100000  # Dejar margen para respuesta
+) -> str:
+    """
+    Prepara contexto optimizado para el LLM
+    
+    Estrategia:
+    1. Siempre incluir: requirements, user_feedback, validation_issues
+    2. Del estado previo: solo resumen, no todo
+    3. Si excede límite: comprimir aún más
+    """
+    
+    context_parts = []
+    token_count = 0
+    
+    # 1. Requirements (prioritario)
+    context_parts.append(f"# REQUIREMENTS\n{current_requirements}")
+    token_count += estimate_tokens(current_requirements)
+    
+    # 2. User feedback (prioritario)
+    if user_feedback:
+        context_parts.append(f"# USER FEEDBACK\n{user_feedback}")
+        token_count += estimate_tokens(user_feedback)
+    
+    # 3. Validation issues (prioritario)
+    if validation_issues:
+        issues_text = format_issues(validation_issues)
+        context_parts.append(f"# ISSUES TO ADDRESS\n{issues_text}")
+        token_count += estimate_tokens(issues_text)
+    
+    # 4. Previous state (resumido)
+    if previous_state and token_count < max_tokens * 0.7:
+        summary = create_state_summary(previous_state)
+        context_parts.append(f"# PREVIOUS ITERATION\n{summary}")
+        token_count += estimate_tokens(summary)
+    
+    # 5. Verificar límite
+    if token_count > max_tokens:
+        # Comprimir aún más
+        context_parts = compress_context(context_parts, max_tokens)
+    
+    return "\n\n".join(context_parts)
+
+def create_state_summary(state: ProjectState) -> str:
+    """Crea un resumen compacto de un ProjectState"""
+    
+    analysis = state.outputs.get("analysis", {})
+    validation = state.outputs.get("validation", {})
+    
+    summary = f"""
+Iteration: {state.iteration}
+Architecture: {analysis.get('architecture_pattern', 'N/A')}
+Components: {', '.join(analysis.get('main_components', [])[:5])}... ({len(analysis.get('main_components', []))} total)
+Scores: Arch={validation.get('scores', {}).get('architecture', 'N/A')}/10, Code={validation.get('scores', {}).get('code', 'N/A')}/10
+Issues: {len(validation.get('issues', []))} detected
+"""
+    return summary.strip()
+
+def estimate_tokens(text: str) -> int:
+    """Estimación rápida de tokens (1 token ≈ 4 caracteres)"""
+    return len(text) // 4
+```
+
+### Diff Engine - Implementación
+
+```python
+# arqsysia/core/diff_engine.py
+
+from typing import Dict, List, Any
+from dataclasses import dataclass
+
+@dataclass
+class DiffResult:
+    """Resultado de comparación entre dos states"""
+    
+    # Arquitectura
+    architecture_changed: bool
+    architecture_old: str
+    architecture_new: str
+    
+    # Componentes
+    components_added: List[str]
+    components_removed: List[str]
+    components_modified: List[str]
+    components_unchanged: List[str]
+    
+    # Stack tecnológico
+    technologies_added: List[str]
+    technologies_removed: List[str]
+    
+    # Scores
+    scores_diff: Dict[str, Dict[str, int]]  # {aspect: {old, new, change}}
+    
+    # Métricas
+    duration_diff: float
+    
+    # Issues
+    issues_added: List[Dict]
+    issues_resolved: List[Dict]
+    issues_persisting: List[Dict]
+    
+    # Decisiones
+    decisions: List[Decision]
+
+class DiffEngine:
+    """Motor de comparación entre iteraciones"""
+    
+    def compare_states(
+        self,
+        state1: ProjectState,
+        state2: ProjectState
+    ) -> DiffResult:
+        """Compara dos ProjectStates"""
+        
+        return DiffResult(
+            architecture_changed=self._compare_architecture(state1, state2),
+            architecture_old=self._get_architecture(state1),
+            architecture_new=self._get_architecture(state2),
+            
+            components_added=self._get_added_components(state1, state2),
+            components_removed=self._get_removed_components(state1, state2),
+            components_modified=self._get_modified_components(state1, state2),
+            components_unchanged=self._get_unchanged_components(state1, state2),
+            
+            technologies_added=self._get_added_technologies(state1, state2),
+            technologies_removed=self._get_removed_technologies(state1, state2),
+            
+            scores_diff=self._compare_scores(state1, state2),
+            
+            duration_diff=self._compare_duration(state1, state2),
+            
+            issues_added=self._get_new_issues(state1, state2),
+            issues_resolved=self._get_resolved_issues(state1, state2),
+            issues_persisting=self._get_persisting_issues(state1, state2),
+            
+            decisions=self._get_decisions_between(state1, state2)
+        )
+    
+    def format_diff_text(self, diff: DiffResult) -> str:
+        """Formatea diff como texto (estilo git diff)"""
+        
+        lines = []
+        lines.append("=" * 60)
+        lines.append(f"COMPARISON: v{diff.state1.iteration} → v{diff.state2.iteration}")
+        lines.append("=" * 60)
+        lines.append("")
+        
+        # Arquitectura
+        if diff.architecture_changed:
+            lines.append("📐 ARCHITECTURE:")
+            lines.append(f"  - {diff.architecture_old}")
+            lines.append(f"  + {diff.architecture_new}")
+            lines.append("")
+        
+        # Componentes
+        if diff.components_added or diff.components_removed:
+            lines.append("🧩 COMPONENTS:")
+            for comp in diff.components_removed:
+                lines.append(f"  - {comp} (removed)")
+            for comp in diff.components_added:
+                lines.append(f"  + {comp} (added)")
+            for comp in diff.components_modified:
+                lines.append(f"  ≈ {comp} (modified)")
+            lines.append("")
+        
+        # Scores
+        lines.append("📊 SCORES:")
+        for aspect, scores in diff.scores_diff.items():
+            change_symbol = "✅" if scores['change'] > 0 else "⚠️" if scores['change'] < 0 else "➡️"
+            lines.append(f"  {aspect.capitalize()}: {scores['old']} → {scores['new']} ({scores['change']:+d}) {change_symbol}")
+        lines.append("")
+        
+        # Issues
+        if diff.issues_added or diff.issues_resolved:
+            lines.append("🐛 ISSUES:")
+            lines.append(f"  New: {len(diff.issues_added)}")
+            lines.append(f"  Resolved: {len(diff.issues_resolved)}")
+            lines.append(f"  Persisting: {len(diff.issues_persisting)}")
+            lines.append("")
+        
+        # Decisiones
+        if diff.decisions:
+            lines.append("💡 DECISIONS:")
+            for decision in diff.decisions:
+                lines.append(f"  [{decision.phase}] {decision.decision}")
+                lines.append(f"      → {decision.rationale[:80]}...")
+            lines.append("")
+        
+        lines.append("=" * 60)
+        
+        return "\n".join(lines)
+    
+    def format_diff_table(self, diff: DiffResult) -> str:
+        """Formatea diff como tabla (usando Rich)"""
+        
+        from rich.console import Console
+        from rich.table import Table
+        
+        console = Console()
+        
+        table = Table(title=f"Comparison: v{diff.state1.iteration} vs v{diff.state2.iteration}")
+        
+        table.add_column("Aspect", style="cyan", no_wrap=True)
+        table.add_column(f"v{diff.state1.iteration}", style="magenta")
+        table.add_column(f"v{diff.state2.iteration}", style="green")
+        table.add_column("Change", justify="right")
+        
+        # Arquitectura
+        table.add_row(
+            "Architecture",
+            diff.architecture_old,
+            diff.architecture_new,
+            "⬆️ Changed" if diff.architecture_changed else "➡️ Same"
+        )
+        
+        # Componentes
+        table.add_row(
+            "Components",
+            str(len(self._get_all_components(state1))),
+            str(len(self._get_all_components(state2))),
+            f"{len(diff.components_added):+d}"
+        )
+        
+        # Scores
+        for aspect, scores in diff.scores_diff.items():
+            change_symbol = "✅" if scores['change'] > 0 else "⚠️" if scores['change'] < 0 else "➡️"
+            table.add_row(
+                f"Score: {aspect.capitalize()}",
+                f"{scores['old']}/10",
+                f"{scores['new']}/10",
+                f"{scores['change']:+d} {change_symbol}"
+            )
+        
+        # Duración
+        table.add_row(
+            "Duration",
+            f"{diff.state1.execution_metrics.get('total', 0):.1f} min",
+            f"{diff.state2.execution_metrics.get('total', 0):.1f} min",
+            f"{diff.duration_diff:+.1f} min"
+        )
+        
+        return table
+    
+    # Métodos auxiliares privados
+    
+    def _compare_architecture(self, s1: ProjectState, s2: ProjectState) -> bool:
+        return self._get_architecture(s1) != self._get_architecture(s2)
+    
+    def _get_architecture(self, state: ProjectState) -> str:
+        return state.outputs.get("analysis", {}).get("architecture_pattern", "Unknown")
+    
+    def _get_all_components(self, state: ProjectState) -> List[str]:
+        return state.outputs.get("analysis", {}).get("main_components", [])
+    
+    def _get_added_components(self, s1: ProjectState, s2: ProjectState) -> List[str]:
+        comps1 = set(self._get_all_components(s1))
+        comps2 = set(self._get_all_components(s2))
+        return list(comps2 - comps1)
+    
+    def _get_removed_components(self, s1: ProjectState, s2: ProjectState) -> List[str]:
+        comps1 = set(self._get_all_components(s1))
+        comps2 = set(self._get_all_components(s2))
+        return list(comps1 - comps2)
+    
+    def _get_modified_components(self, s1: ProjectState, s2: ProjectState) -> List[str]:
+        # TODO: Implementar detección de modificaciones
+        # Por ahora, retornar lista vacía
+        return []
+    
+    def _get_unchanged_components(self, s1: ProjectState, s2: ProjectState) -> List[str]:
+        comps1 = set(self._get_all_components(s1))
+        comps2 = set(self._get_all_components(s2))
+        return list(comps1 & comps2)
+    
+    def _compare_scores(self, s1: ProjectState, s2: ProjectState) -> Dict:
+        scores1 = s1.outputs.get("validation", {}).get("scores", {})
+        scores2 = s2.outputs.get("validation", {}).get("scores", {})
+        
+        result = {}
+        for key in scores1.keys() | scores2.keys():
+            old = scores1.get(key, 0)
+            new = scores2.get(key, 0)
+            result[key] = {
+                "old": old,
+                "new": new,
+                "change": new - old
+            }
+        
+        return result
+    
+    def _compare_duration(self, s1: ProjectState, s2: ProjectState) -> float:
+        total1 = sum(s1.execution_metrics.values())
+        total2 = sum(s2.execution_metrics.values())
+        return total2 - total1
+    
+    def _get_new_issues(self, s1: ProjectState, s2: ProjectState) -> List[Dict]:
+        issues1 = {i['description']: i for i in s1.outputs.get("validation", {}).get("issues", [])}
+        issues2 = s2.outputs.get("validation", {}).get("issues", [])
+        
+        return [i for i in issues2 if i['description'] not in issues1]
+    
+    def _get_resolved_issues(self, s1: ProjectState, s2: ProjectState) -> List[Dict]:
+        issues1 = s1.outputs.get("validation", {}).get("issues", [])
+        issues2 = {i['description']: i for i in s2.outputs.get("validation", {}).get("issues", [])}
+        
+        return [i for i in issues1 if i['description'] not in issues2]
+    
+    def _get_persisting_issues(self, s1: ProjectState, s2: ProjectState) -> List[Dict]:
+        issues1 = {i['description']: i for i in s1.outputs.get("validation", {}).get("issues", [])}
+        issues2 = {i['description']: i for i in s2.outputs.get("validation", {}).get("issues", [])}
+        
+        persisting_keys = set(issues1.keys()) & set(issues2.keys())
+        return [issues2[k] for k in persisting_keys]
+    
+    def _get_decisions_between(self, s1: ProjectState, s2: ProjectState) -> List[Decision]:
+        # Obtener decisiones entre las dos iteraciones
+        # Implementar cuando tengamos DecisionLogger
+        return []
+```
+
+### FileStorage - Implementación Completa
+
+```python
+# arqsysia/storage/file_storage.py
+
+import json
+import yaml
+from pathlib import Path
+from typing import List, Optional
+from datetime import datetime
+from .base import StorageBackend
+from arqsysia.core.state import Iteration, Decision, ProjectMetadata, ProjectState
+
+class FileStorage(StorageBackend):
+    """Backend de almacenamiento basado en archivos"""
+    
+    def __init__(self, base_path: str = "./projects"):
+        self.base_path = Path(base_path)
+        self.base_path.mkdir(exist_ok=True)
+    
+    def _get_project_path(self, project_name: str) -> Path:
+        """Obtiene el path del proyecto"""
+        return self.base_path / project_name
+    
+    def _get_iteration_path(self, project_name: str, iteration: int) -> Path:
+        """Obtiene el path de una iteración"""
+        return self._get_project_path(project_name) / "iterations" / f"iteration_{iteration:03d}"
+    
+    def save_iteration(self, iteration: Iteration) -> None:
+        """Guarda una iteración completa"""
+        iter_path = self._get_iteration_path(
+            iteration.project_name, 
+            iteration.iteration_number
+        )
+        iter_path.mkdir(parents=True, exist_ok=True)
+        
+        # Guardar state
+        state_file = iter_path / "state.json"
+        with open(state_file, 'w', encoding='utf-8') as f:
+            json.dump(self._state_to_dict(iteration.state), f, indent=2, default=str)
+        
+        # Guardar decisions
+        decisions_file = iter_path / "decisions.json"
+        with open(decisions_file, 'w', encoding='utf-8') as f:
+            json.dump(
+                [d.to_dict() for d in iteration.decisions], 
+                f, indent=2, default=str
+            )
+        
+        # Guardar metadata de iteración
+        iter_metadata_file = iter_path / "metadata.json"
+        with open(iter_metadata_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                "iteration_number": iteration.iteration_number,
+                "created_at": iteration.created_at.isoformat(),
+                "duration_seconds": iteration.duration_seconds,
+                "phase_durations": iteration.phase_durations,
+                "final_scores": iteration.final_scores,
+                "status": iteration.status
+            }, f, indent=2)
+        
+        # Guardar outputs (archivos markdown)
+        outputs_path = iter_path / "outputs"
+        outputs_path.mkdir(exist_ok=True)
+        
+        # Actualizar metadata del proyecto
+        self._update_metadata_after_save(iteration)
+        
+        # Agregar decisiones al log global
+        for decision in iteration.decisions:
+            self.save_decision(iteration.project_name, decision)
+    
+    def load_iteration(self, project_name: str, iteration_number: int) -> Iteration:
+        """Carga una iteración específica"""
+        iter_path = self._get_iteration_path(project_name, iteration_number)
+        
+        if not iter_path.exists():
+            raise FileNotFoundError(
+                f"Iteration {iteration_number} not found for project {project_name}"
+            )
+        
+        # Cargar state
+        state_file = iter_path / "state.json"
+        with open(state_file, 'r', encoding='utf-8') as f:
+            state_dict = json.load(f)
+            state = self._dict_to_state(state_dict)
+        
+        # Cargar decisions
+        decisions_file = iter_path / "decisions.json"
+        decisions = []
+        if decisions_file.exists():
+            with open(decisions_file, 'r', encoding='utf-8') as f:
+                decisions_data = json.load(f)
+                decisions = [self._dict_to_decision(d) for d in decisions_data]
+        
+        # Cargar metadata de iteración
+        iter_metadata_file = iter_path / "metadata.json"
+        with open(iter_metadata_file, 'r', encoding='utf-8') as f:
+            iter_metadata = json.load(f)
+        
+        # Reconstruir Iteration
+        return Iteration(
+            project_name=project_name,
+            iteration_number=iteration_number,
+            state=state,
+            decisions=decisions,
+            created_at=datetime.fromisoformat(iter_metadata["created_at"]),
+            duration_seconds=iter_metadata["duration_seconds"],
+            phase_durations=iter_metadata["phase_durations"],
+            final_scores=iter_metadata["final_scores"],
+            status=iter_metadata["status"]
+        )
+    
+    def list_iterations(self, project_name: str) -> List[Iteration]:
+        """Lista todas las iteraciones de un proyecto"""
+        project_path = self._get_project_path(project_name)
+        iterations_path = project_path / "iterations"
+        
+        if not iterations_path.exists():
+            return []
+        
+        iterations = []
+        for iter_dir in sorted(iterations_path.iterdir()):
+            if iter_dir.is_dir() and iter_dir.name.startswith("iteration_"):
+                iter_num = int(iter_dir.name.split("_")[1])
+                try:
+                    iteration = self.load_iteration(project_name, iter_num)
+                    iterations.append(iteration)
+                except Exception as e:
+                    print(f"Warning: Could not load iteration {iter_num}: {e}")
+        
+        return iterations
+    
+    def save_decision(self, project_name: str, decision: Decision) -> None:
+        """Guarda una decisión en el log append-only"""
+        project_path = self._get_project_path(project_name)
+        project_path.mkdir(exist_ok=True)
+        
+        log_file = project_path / "decisions_log.jsonl"
+        
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(decision.to_dict(), default=str) + '\n')
+    
+    def get_decisions(
+        self, 
+        project_name: str, 
+        iteration: Optional[int] = None
+    ) -> List[Decision]:
+        """Obtiene decisiones"""
+        project_path = self._get_project_path(project_name)
+        log_file = project_path / "decisions_log.jsonl"
+        
+        if not log_file.exists():
+            return []
+        
+        decisions = []
+        with open(log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                d = self._dict_to_decision(json.loads(line))
+                if iteration is None or d.iteration == iteration:
+                    decisions.append(d)
+        
+        return decisions
+    
+    def save_metadata(self, metadata: ProjectMetadata) -> None:
+        """Guarda metadata del proyecto"""
+        project_path = self._get_project_path(metadata.project_name)
+        project_path.mkdir(exist_ok=True)
+        
+        metadata_file = project_path / "metadata.json"
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata.to_dict(), f, indent=2, default=str)
+    
+    def load_metadata(self, project_name: str) -> ProjectMetadata:
+        """Carga metadata del proyecto"""
+        project_path = self._get_project_path(project_name)
+        metadata_file = project_path / "metadata.json"
+        
+        if not metadata_file.exists():
+            raise FileNotFoundError(f"Project {project_name} not found")
+        
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Convertir strings ISO a datetime
+            data['created_at'] = datetime.fromisoformat(data['created_at'])
+            data['last_updated'] = datetime.fromisoformat(data['last_updated'])
+            return ProjectMetadata(**data)
+    
+    def delete_iteration(self, project_name: str, iteration_number: int) -> None:
+        """Elimina una iteración (para rollback)"""
+        import shutil
+        iter_path = self._get_iteration_path(project_name, iteration_number)
+        if iter_path.exists():
+            shutil.rmtree(iter_path)
+    
+    def _update_metadata_after_save(self, iteration: Iteration) -> None:
+        """Actualiza metadata después de guardar una iteración"""
+        try:
+            metadata = self.load_metadata(iteration.project_name)
+            metadata.total_iterations = iteration.iteration_number
+            metadata.current_iteration = iteration.iteration_number
+            metadata.last_updated = iteration.created_at
+            metadata.total_duration_seconds += iteration.duration_seconds
+            metadata.average_iteration_time = (
+                metadata.total_duration_seconds / metadata.total_iterations
+            )
+        except FileNotFoundError:
+            # Primera iteración, crear metadata
+            metadata = ProjectMetadata(
+                project_name=iteration.project_name,
+                created_at=iteration.created_at,
+                last_updated=iteration.created_at,
+                total_iterations=1,
+                current_iteration=1,
+                storage_backend="file",
+                models_used={},  # Se llenará después
+                total_duration_seconds=iteration.duration_seconds,
+                average_iteration_time=iteration.duration_seconds
+            )
+        
+        self.save_metadata(metadata)
+    
+    # Métodos auxiliares de conversión
+    
+    def _state_to_dict(self, state: ProjectState) -> dict:
+        """Convierte ProjectState a dict para JSON"""
+        return {
+            "project_name": state.project_name,
+            "iteration": state.iteration,
+            "parent_iteration": state.parent_iteration,
+            "created_at": state.created_at.isoformat(),
+            "original_requirements": state.original_requirements,
+            "outputs": state.outputs,
+            "user_feedback": state.user_feedback,
+            "previous_issues": state.previous_issues,
+            "changes_from_previous": state.changes_from_previous,
+            "execution_metrics": state.execution_metrics
+        }
+    
+    def _dict_to_state(self, data: dict) -> ProjectState:
+        """Convierte dict a ProjectState"""
+        data['created_at'] = datetime.fromisoformat(data['created_at'])
+        return ProjectState(**data)
+    
+    def _dict_to_decision(self, data: dict) -> Decision:
+        """Convierte dict a Decision"""
+        data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+        return Decision(**data)
+```
+
+---
+
+## 🎯 Resumen Ejecutivo
+
+### Qué vamos a construir
+
+**ArqSysIA v1.0** es la evolución del MVP v0.1 que transforma una herramienta "one-shot" en un **sistema iterativo profesional** que soporta:
+
+1. **Múltiples ciclos de mejora** en un proyecto
+2. **Feedback loops** entre fases (volver a Analyzer o CodeGen con contexto)
+3. **Historial completo** de iteraciones con comparaciones
+4. **Memoria de decisiones** arquitectónicas documentadas
+5. **Flexibilidad de almacenamiento** (archivos o SQLite)
+
+### Filosofía de implementación
+
+> **"Empezar simple, evolucionar después"**
+
+- **Fase Simple (v1.0-alpha):** 2-5 iteraciones, diff básico, solo archivos
+- **Fase Completa (v1.0-stable):** 10+ iteraciones, diff avanzado, SQLite opcional
+
+### Componentes principales
+
+1. **Storage Layer** (pluggable)
+   - FileStorage (default)

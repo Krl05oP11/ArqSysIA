@@ -1,0 +1,817 @@
+# ArqSysIA v1.0 - Plan de Implementación Detallado
+
+**Fecha:** 17 de Octubre, 2025  
+**Estado:** Listo para comenzar implementación  
+**Documento base:** arqsysia-v1-architecture.md
+
+---
+
+## 📋 Resumen Ejecutivo
+
+### Objetivo General
+Transformar ArqSysIA MVP v0.1 (one-shot) en un **sistema iterativo profesional** que soporte múltiples ciclos de mejora con feedback loops y memoria de decisiones.
+
+### Cambios Fundamentales
+
+| Aspecto | MVP v0.1 | v1.0 Iterativo |
+|---------|----------|----------------|
+| Iteraciones | 1 (lineal) | Múltiples (cíclico) |
+| Feedback | No | Sí (entre fases) |
+| Historial | No | Sí (completo) |
+| Comparaciones | No | Sí (diff viewer) |
+| Decisiones | No documentadas | Memoria completa |
+| Storage | Solo en memoria/temporal | FileStorage + SQLite |
+
+### Filosofía
+> "Empezar simple, evolucionar después"
+
+**v1.0-alpha** (Fase Simple):
+- 2-5 iteraciones
+- Diff básico (texto)
+- Solo FileStorage
+- ~4-6 semanas de desarrollo
+
+**v1.0-stable** (Fase Completa):
+- 10+ iteraciones
+- Diff avanzado (texto + tabla + export)
+- SQLite opcional
+- +2-3 semanas adicionales
+
+---
+
+## 🎯 Sesión Actual (Sesión 6) - Plan de Acción
+
+### Objetivo de Hoy
+Iniciar implementación de **Fase 1: Fundamentos** del roadmap.
+
+### Tareas Específicas
+
+#### 1. Actualizar Estructura del Proyecto
+
+```bash
+cd ~/Projects/ArqSysIA
+
+# Crear nuevas carpetas
+mkdir -p arqsysia/storage
+mkdir -p arqsysia/ui
+mkdir -p tests/integration
+mkdir -p docs/v1.0
+
+# Agregar __init__.py donde falten
+touch arqsysia/storage/__init__.py
+touch arqsysia/ui/__init__.py
+```
+
+#### 2. Actualizar ProjectState v2.0
+
+**Archivo:** `arqsysia/core/state.py`
+
+**Cambios a realizar:**
+```python
+# AGREGAR estos campos a ProjectState:
+
+# === Metadata de iteración (NUEVO) ===
+project_name: str
+iteration: int = 1
+parent_iteration: Optional[int] = None
+created_at: datetime = field(default_factory=datetime.now)
+
+# === Feedback context (NUEVO) ===
+user_feedback: Optional[str] = None
+previous_issues: List[Dict] = field(default_factory=list)
+changes_from_previous: Optional[str] = None
+```
+
+**Pasos:**
+1. Abrir `arqsysia/core/state.py`
+2. Agregar imports: `from datetime import datetime`, `from typing import Optional, List`
+3. Agregar los nuevos campos a `@dataclass ProjectState`
+4. Mantener compatibilidad con código existente (valores default)
+
+#### 3. Crear Nuevos Esquemas de Datos
+
+**A. Iteration**
+
+Crear archivo: `arqsysia/core/iteration.py`
+
+```python
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict
+from datetime import datetime
+from .state import ProjectState
+from .decision import Decision
+
+@dataclass
+class Iteration:
+    """Representa una iteración completa del proyecto"""
+    
+    project_name: str
+    iteration_number: int
+    state: ProjectState
+    decisions: List[Decision] = field(default_factory=list)
+    
+    # Metadata
+    created_at: datetime = field(default_factory=datetime.now)
+    duration_seconds: float = 0.0
+    phase_durations: Dict[str, float] = field(default_factory=dict)
+    
+    # Scores
+    final_scores: Dict[str, int] = field(default_factory=dict)
+    
+    # Status
+    status: str = "completed"  # "completed", "in_progress", "failed"
+    
+    def to_dict(self) -> Dict:
+        """Serialización completa"""
+        return {
+            "project_name": self.project_name,
+            "iteration_number": self.iteration_number,
+            "state": asdict(self.state),
+            "decisions": [d.to_dict() for d in self.decisions],
+            "created_at": self.created_at.isoformat(),
+            "duration_seconds": self.duration_seconds,
+            "phase_durations": self.phase_durations,
+            "final_scores": self.final_scores,
+            "status": self.status
+        }
+```
+
+**B. Decision**
+
+Crear archivo: `arqsysia/core/decision.py`
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Dict
+from datetime import datetime
+
+@dataclass
+class Decision:
+    """Representa una decisión arquitectónica o de código"""
+    
+    iteration: int
+    phase: str  # "analyzer", "codegen", "validator"
+    timestamp: datetime = field(default_factory=datetime.now)
+    
+    # La decisión
+    decision: str = ""
+    rationale: str = ""
+    
+    # Contexto
+    alternatives_considered: List[str] = field(default_factory=list)
+    chosen_alternative: str = ""
+    
+    # Impacto
+    impacted_components: List[str] = field(default_factory=list)
+    
+    # Metadata
+    triggered_by: str = "manual"  # "user_feedback", "validator_issues", "manual"
+    
+    def to_dict(self) -> Dict:
+        return {
+            "iteration": self.iteration,
+            "phase": self.phase,
+            "timestamp": self.timestamp.isoformat(),
+            "decision": self.decision,
+            "rationale": self.rationale,
+            "alternatives_considered": self.alternatives_considered,
+            "chosen_alternative": self.chosen_alternative,
+            "impacted_components": self.impacted_components,
+            "triggered_by": self.triggered_by
+        }
+```
+
+**C. ProjectMetadata**
+
+Crear archivo: `arqsysia/core/metadata.py`
+
+```python
+from dataclasses import dataclass, asdict
+from typing import Dict
+from datetime import datetime
+
+@dataclass
+class ProjectMetadata:
+    """Metadata global del proyecto"""
+    
+    project_name: str
+    created_at: datetime
+    last_updated: datetime
+    
+    # Iteraciones
+    total_iterations: int = 0
+    current_iteration: int = 0
+    
+    # Configuración
+    storage_backend: str = "file"  # "file" o "sqlite"
+    models_used: Dict[str, str] = None
+    
+    # Estadísticas
+    total_duration_seconds: float = 0.0
+    average_iteration_time: float = 0.0
+    
+    def __post_init__(self):
+        if self.models_used is None:
+            self.models_used = {}
+    
+    def to_dict(self) -> Dict:
+        return asdict(self)
+```
+
+#### 4. Crear StorageBackend (Abstract Class)
+
+Crear archivo: `arqsysia/storage/base.py`
+
+```python
+from abc import ABC, abstractmethod
+from typing import List, Optional
+
+class StorageBackend(ABC):
+    """Interfaz abstracta para backends de almacenamiento"""
+    
+    @abstractmethod
+    def save_iteration(self, iteration) -> None:
+        """Guarda una iteración completa"""
+        pass
+    
+    @abstractmethod
+    def load_iteration(self, project_name: str, iteration_number: int):
+        """Carga una iteración específica"""
+        pass
+    
+    @abstractmethod
+    def list_iterations(self, project_name: str) -> List:
+        """Lista todas las iteraciones de un proyecto"""
+        pass
+    
+    @abstractmethod
+    def save_decision(self, project_name: str, decision) -> None:
+        """Guarda una decisión"""
+        pass
+    
+    @abstractmethod
+    def get_decisions(
+        self, 
+        project_name: str, 
+        iteration: Optional[int] = None
+    ) -> List:
+        """Obtiene decisiones (todas o de una iteración específica)"""
+        pass
+    
+    @abstractmethod
+    def save_metadata(self, metadata) -> None:
+        """Guarda metadata del proyecto"""
+        pass
+    
+    @abstractmethod
+    def load_metadata(self, project_name: str):
+        """Carga metadata del proyecto"""
+        pass
+    
+    @abstractmethod
+    def delete_iteration(self, project_name: str, iteration_number: int) -> None:
+        """Elimina una iteración (para rollback)"""
+        pass
+```
+
+#### 5. Actualizar __init__.py files
+
+**arqsysia/core/__init__.py**
+```python
+from .state import ProjectState
+from .iteration import Iteration
+from .decision import Decision
+from .metadata import ProjectMetadata
+from .orchestrator import Orchestrator
+
+__all__ = [
+    'ProjectState',
+    'Iteration',
+    'Decision',
+    'ProjectMetadata',
+    'Orchestrator'
+]
+```
+
+**arqsysia/storage/__init__.py**
+```python
+from .base import StorageBackend
+
+__all__ = ['StorageBackend']
+```
+
+#### 6. Tests Básicos
+
+Crear: `tests/test_new_schemas.py`
+
+```python
+import pytest
+from datetime import datetime
+from arqsysia.core.state import ProjectState
+from arqsysia.core.iteration import Iteration
+from arqsysia.core.decision import Decision
+from arqsysia.core.metadata import ProjectMetadata
+
+def test_project_state_v2():
+    """Test: ProjectState con nuevos campos"""
+    state = ProjectState(
+        project_name="test_project",
+        iteration=1,
+        original_requirements="Test requirements"
+    )
+    
+    assert state.project_name == "test_project"
+    assert state.iteration == 1
+    assert state.parent_iteration is None
+    assert state.user_feedback is None
+    assert isinstance(state.created_at, datetime)
+    assert state.outputs == {}
+
+def test_iteration_creation():
+    """Test: Creación de Iteration"""
+    state = ProjectState(
+        project_name="test",
+        iteration=1,
+        original_requirements="Test"
+    )
+    
+    iteration = Iteration(
+        project_name="test",
+        iteration_number=1,
+        state=state,
+        duration_seconds=120.5
+    )
+    
+    assert iteration.iteration_number == 1
+    assert iteration.duration_seconds == 120.5
+    assert iteration.status == "completed"
+    
+    # Test serialización
+    data = iteration.to_dict()
+    assert "project_name" in data
+    assert "iteration_number" in data
+    assert "state" in data
+
+def test_decision_creation():
+    """Test: Creación de Decision"""
+    decision = Decision(
+        iteration=1,
+        phase="analyzer",
+        decision="Cambio a microservicios",
+        rationale="Mejor escalabilidad",
+        alternatives_considered=["Monolito", "Modular"],
+        chosen_alternative="Microservicios"
+    )
+    
+    assert decision.iteration == 1
+    assert decision.phase == "analyzer"
+    assert isinstance(decision.timestamp, datetime)
+    
+    # Test serialización
+    data = decision.to_dict()
+    assert "decision" in data
+    assert "rationale" in data
+
+def test_project_metadata():
+    """Test: ProjectMetadata"""
+    now = datetime.now()
+    metadata = ProjectMetadata(
+        project_name="test",
+        created_at=now,
+        last_updated=now,
+        total_iterations=3,
+        current_iteration=3
+    )
+    
+    assert metadata.project_name == "test"
+    assert metadata.total_iterations == 3
+    assert metadata.storage_backend == "file"
+    
+    # Test serialización
+    data = metadata.to_dict()
+    assert "project_name" in data
+    assert "total_iterations" in data
+```
+
+Ejecutar tests:
+```bash
+cd ~/Projects/ArqSysIA
+source venv/bin/activate
+pytest tests/test_new_schemas.py -v
+```
+
+---
+
+## 📝 Checklist de Sesión 6
+
+### Setup Inicial
+- [ ] Revisar documentos: `PROJECT_LOG.md` y `arqsysia-v1-architecture.md`
+- [ ] Crear rama Git para v1.0: `git checkout -b feature/v1.0-iterative`
+- [ ] Crear carpetas nuevas: `storage/`, `ui/`, `tests/integration/`, `docs/v1.0/`
+
+### Implementación Core
+- [ ] Actualizar `arqsysia/core/state.py` (ProjectState v2.0)
+- [ ] Crear `arqsysia/core/iteration.py`
+- [ ] Crear `arqsysia/core/decision.py`
+- [ ] Crear `arqsysia/core/metadata.py`
+- [ ] Crear `arqsysia/storage/base.py` (StorageBackend abstract)
+- [ ] Actualizar `arqsysia/core/__init__.py`
+- [ ] Crear `arqsysia/storage/__init__.py`
+
+### Tests
+- [ ] Crear `tests/test_new_schemas.py`
+- [ ] Ejecutar tests: `pytest tests/test_new_schemas.py -v`
+- [ ] Verificar que pasan todos los tests
+
+### Documentación
+- [ ] Guardar `arqsysia-v1-architecture.md` en `docs/v1.0/`
+- [ ] Guardar este plan en `docs/v1.0/implementation-plan.md`
+- [ ] Actualizar `PROJECT_LOG.md` con entrada de Sesión 6
+
+### Validación
+- [ ] Código compila sin errores
+- [ ] Todos los tests pasan
+- [ ] Imports funcionan correctamente
+- [ ] Compatibilidad con código existente mantenida
+
+---
+
+## 🎯 Objetivos por Sesión (Detallado)
+
+### Sesión 6 (HOY) - Fundamentos Base
+**Duración estimada:** 2-3 horas
+
+**Entregables:**
+- ✅ Esquemas de datos (ProjectState v2, Iteration, Decision, ProjectMetadata)
+- ✅ StorageBackend (abstract class)
+- ✅ Tests básicos funcionando
+- ✅ Documentación guardada
+
+**Criterio de éxito:**
+```bash
+pytest tests/test_new_schemas.py -v
+# Resultado esperado: 4/4 tests passed
+```
+
+---
+
+### Sesión 7 - FileStorage Completo
+**Duración estimada:** 3-4 horas
+
+**Objetivo:** Implementar FileStorage completo con todas las operaciones.
+
+**Tareas:**
+1. Crear `arqsysia/storage/file_storage.py` (clase completa)
+2. Implementar todos los métodos abstractos de StorageBackend
+3. Crear estructura de directorios para proyectos
+4. Crear `tests/test_file_storage.py`
+5. Tests de:
+   - save_iteration / load_iteration
+   - list_iterations
+   - save_decision / get_decisions
+   - save_metadata / load_metadata
+   - delete_iteration (rollback)
+
+**Entregables:**
+- FileStorage completamente funcional
+- 8-10 tests pasando
+- Estructura de proyectos creada correctamente
+
+**Criterio de éxito:**
+```bash
+pytest tests/test_file_storage.py -v
+# Resultado esperado: 8+/8+ tests passed
+
+# Verificar estructura creada
+ls -la projects/test_project/
+# Debe existir: metadata.json, iterations/, decisions_log.jsonl
+```
+
+---
+
+### Sesión 8 - Version Manager
+**Duración estimada:** 2-3 horas
+
+**Objetivo:** Implementar VersionManager con operaciones de historial.
+
+**Tareas:**
+1. Crear `arqsysia/core/version_manager.py`
+2. Implementar métodos:
+   - `save_iteration()`
+   - `get_iteration()`
+   - `list_iterations()`
+   - `get_latest_iteration()`
+   - `compare_iterations()` (básico)
+   - `rollback_to()`
+3. Crear `tests/test_version_manager.py`
+4. Tests de flujos completos
+
+**Entregables:**
+- VersionManager funcional
+- Integración con FileStorage
+- 6-8 tests pasando
+
+**Criterio de éxito:**
+```python
+# Test: Crear 3 iteraciones y listarlas
+vm = VersionManager("test_project")
+# ... crear iteraciones ...
+iterations = vm.list_iterations()
+assert len(iterations) == 3
+
+# Test: Rollback
+vm.rollback_to(2)
+assert len(vm.list_iterations()) == 2
+```
+
+---
+
+### Sesión 9 - Decision Logger
+**Duración estimada:** 2 horas
+
+**Objetivo:** Implementar DecisionLogger para memoria de decisiones.
+
+**Tareas:**
+1. Crear `arqsysia/core/decision_logger.py`
+2. Implementar métodos:
+   - `log_decision()`
+   - `get_decisions_for_iteration()`
+   - `get_all_decisions()`
+   - `search_decisions()` (básico)
+3. Crear `tests/test_decision_logger.py`
+4. Integración con FileStorage
+
+**Entregables:**
+- DecisionLogger funcional
+- Append-only log de decisiones
+- 5-6 tests pasando
+
+**Criterio de éxito:**
+```python
+# Test: Crear decisiones y recuperarlas
+logger = DecisionLogger("test_project")
+logger.log_decision(
+    iteration=1,
+    phase="analyzer",
+    decision="Cambio a microservicios",
+    rationale="Escalabilidad",
+    ...
+)
+
+decisions = logger.get_all_decisions()
+assert len(decisions) >= 1
+```
+
+---
+
+### Sesión 10 - Diff Engine
+**Duración estimada:** 3 horas
+
+**Objetivo:** Implementar comparación entre iteraciones.
+
+**Tareas:**
+1. Crear `arqsysia/core/diff_engine.py`
+2. Implementar `DiffResult` dataclass
+3. Implementar métodos de comparación:
+   - `compare_states()`
+   - `format_diff_text()` (estilo git diff)
+   - Comparación de arquitectura
+   - Comparación de componentes
+   - Comparación de scores
+4. Crear `tests/test_diff_engine.py`
+
+**Entregables:**
+- DiffEngine funcional
+- Formato de texto para diffs
+- 6-8 tests pasando
+
+**Criterio de éxito:**
+```python
+# Test: Comparar dos iteraciones
+diff = DiffEngine().compare_states(state_v1, state_v2)
+assert diff.architecture_changed == True
+assert len(diff.components_added) > 0
+```
+
+---
+
+### Sesión 11-12 - Enhanced Phases (Analyzer v2.0)
+**Duración estimada:** 4-5 horas
+
+**Objetivo:** Actualizar Analyzer para soportar feedback loops.
+
+**Tareas:**
+1. Actualizar `arqsysia/phases/analyzer.py`
+2. Agregar parámetros:
+   - `previous_design: Optional[Dict]`
+   - `validation_issues: Optional[List]`
+   - `user_instructions: Optional[str]`
+3. Crear `arqsysia/utils/prompts_v2.py`
+4. Implementar `build_analyzer_prompt()` enriquecido
+5. Actualizar tests existentes
+6. Crear `tests/test_analyzer_v2.py`
+
+**Entregables:**
+- Analyzer v2.0 funcional
+- Prompts enriquecidos con contexto
+- Tests pasando (existentes + nuevos)
+
+**Criterio de éxito:**
+```python
+# Test: Analyzer con contexto previo
+analyzer = AnalyzerPhase(client, "deepseek-r1:32b")
+state_v2 = analyzer.run(
+    state=state_v1,
+    previous_design=state_v1.outputs["analysis"],
+    validation_issues=[{"description": "Problema X"}],
+    user_instructions="Cambiar a microservicios"
+)
+
+assert "changes_from_previous" in state_v2.outputs["analysis"]
+```
+
+---
+
+### Sesión 13-14 - Enhanced Phases (CodeGen y Validator v2.0)
+**Duración estimada:** 4-5 horas
+
+**Objetivo:** Actualizar CodeGen y Validator con feedback.
+
+**Tareas:**
+1. Actualizar `arqsysia/phases/codegen.py` (v2.0)
+2. Actualizar `arqsysia/phases/validator.py` (v2.0)
+3. Implementar prompts enriquecidos
+4. Tests para ambas fases
+5. Verificar integración completa
+
+**Entregables:**
+- CodeGen v2.0 funcional
+- Validator v2.0 con comparaciones
+- Tests pasando
+
+---
+
+### Sesión 15-16 - Iterative Orchestrator
+**Duración estimada:** 5-6 horas
+
+**Objetivo:** Implementar orquestador iterativo.
+
+**Tareas:**
+1. Crear `arqsysia/core/iterative_orchestrator.py`
+2. Implementar métodos:
+   - `run_iteration()`
+   - `post_validation_menu()`
+   - `regenerate_code()`
+   - `redesign_architecture()`
+3. Integración con VersionManager y DecisionLogger
+4. Crear `tests/test_iterative_orchestrator.py`
+5. Test de integración end-to-end
+
+**Entregables:**
+- IterativeOrchestrator funcional
+- Pipeline iterativo completo
+- Tests de integración pasando
+
+**Criterio de éxito:**
+```python
+# Test: Flujo completo de 2 iteraciones
+orch = IterativeOrchestrator("test_project")
+
+# Iteración 1
+state_v1 = orch.run_iteration(
+    iteration_number=1,
+    requirements="Blog personal"
+)
+assert state_v1.iteration == 1
+
+# Iteración 2 con feedback
+state_v2 = orch.run_iteration(
+    iteration_number=2,
+    previous_state=state_v1,
+    user_feedback="Agregar autenticación"
+)
+assert state_v2.iteration == 2
+assert state_v2.user_feedback == "Agregar autenticación"
+```
+
+---
+
+### Sesión 17-18 - CLI Iterativa
+**Duración estimada:** 4-5 horas
+
+**Objetivo:** Actualizar interfaz de usuario.
+
+**Tareas:**
+1. Actualizar `main.py` con menú iterativo
+2. Crear `arqsysia/ui/iteration_menu.py`
+3. Crear `arqsysia/ui/diff_viewer.py`
+4. Implementar:
+   - Menú principal
+   - Vista de historial
+   - Menú post-validación
+   - Diff viewer (texto)
+   - Selector de storage
+5. Tests manuales de UX
+
+**Entregables:**
+- CLI iterativa funcional
+- Menús con Rich
+- Diff viewer básico
+
+---
+
+### Sesión 19-20 - Testing y Refinamiento
+**Duración estimada:** 4-6 horas
+
+**Objetivo:** Estabilizar v1.0-alpha.
+
+**Tareas:**
+1. Tests de integración completos
+2. Casos de uso reales (2-3 proyectos)
+3. Optimización de prompts
+4. Fixes de bugs
+5. Documentación de usuario
+
+**Entregables:**
+- Suite completa de tests pasando
+- 2-3 proyectos de ejemplo completados
+- Documentación actualizada
+- v1.0-alpha stable
+
+---
+
+## 📚 Estructura Final del Proyecto v1.0
+
+```
+ArqSysIA/
+├── arqsysia/
+│   ├── __init__.py
+│   ├── clients/
+│   │   ├── __init__.py
+│   │   └── ollama_client.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── state.py              ← ACTUALIZADO v2.0
+│   │   ├── iteration.py          ← NUEVO
+│   │   ├── decision.py           ← NUEVO
+│   │   ├── metadata.py           ← NUEVO
+│   │   ├── version_manager.py    ← NUEVO
+│   │   ├── decision_logger.py    ← NUEVO
+│   │   ├── diff_engine.py        ← NUEVO
+│   │   ├── orchestrator.py       (existente)
+│   │   └── iterative_orchestrator.py  ← NUEVO
+│   ├── phases/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── analyzer.py           ← ACTUALIZADO v2.0
+│   │   ├── codegen.py            ← ACTUALIZADO v2.0
+│   │   └── validator.py          ← ACTUALIZADO v2.0
+│   ├── storage/                  ← NUEVO
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── file_storage.py
+│   │   └── sqlite_storage.py     (futuro)
+│   ├── outputs/
+│   │   ├── __init__.py
+│   │   └── generator.py
+│   ├── ui/                       ← NUEVO
+│   │   ├── __init__.py
+│   │   ├── iteration_menu.py
+│   │   └── diff_viewer.py
+│   └── utils/
+│       ├── __init__.py
+│       ├── prompts.py
+│       └── prompts_v2.py         ← NUEVO
+├── tests/
+│   ├── test_new_schemas.py       ← NUEVO
+│   ├── test_file_storage.py      ← NUEVO
+│   ├── test_version_manager.py   ← NUEVO
+│   ├── test_decision_logger.py   ← NUEVO
+│   ├── test_diff_engine.py       ← NUEVO
+│   ├── test_analyzer_v2.py       ← NUEVO
+│   ├── test_iterative_orchestrator.py  ← NUEVO
+│   └── integration/              ← NUEVO
+│       ├── test_two_iterations.py
+│       ├── test_three_iterations.py
+│       └── test_ecommerce_case.py
+├── projects/                     ← NUEVO (creado por FileStorage)
+│   └── [proyectos del usuario]
+├── docs/
+│   └── v1.0/                     ← NUEVO
+│       ├── architecture.md
+│       ├── implementation-plan.md
+│       └── user-guide.md
+├── main.py                       ← ACTUALIZADO v2.0
+├── PROJECT_LOG.md                ← ACTUALIZADO
+└── requirements.txt              ← ACTUALIZADO
+```
+
+---
+
+## 🔄 Flujo de Trabajo Git
+
+### Branch Strategy
+
+```bash
+# Rama principal
+main (MVP v0.1)
