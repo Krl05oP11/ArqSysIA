@@ -7,6 +7,76 @@
 
 ---
 
+## Sesión 8 - Version Manager (EN PROGRESO)
+**Fecha:** 21 de Octubre, 2025  
+**Duración:** ~1 hora (parcial)  
+**Estado:** 🔄 EN PROGRESO (50% completado)
+
+### Objetivos de la Sesión
+- ✅ Implementar VersionManager con operaciones de historial
+- ⏳ Crear tests para VersionManager (PENDIENTE)
+- ⏳ Integración y validación (PENDIENTE)
+
+### Archivos Creados
+1. ✅ `arqsysia/core/version_manager.py` (~280 líneas) - Clase VersionManager completa
+
+### Archivos Pendientes
+1. ⏳ `tests/test_version_manager.py` - Tests comprehensivos (6-8 tests)
+2. ⏳ Actualizar `arqsysia/core/__init__.py` para exportar VersionManager
+
+### Características Implementadas en VersionManager
+- ✅ `save_iteration()` - Guardar iteraciones
+- ✅ `get_iteration()` - Obtener iteración específica
+- ✅ `list_iterations()` - Listar todas las iteraciones
+- ✅ `get_latest_iteration()` - Obtener la última iteración
+- ✅ `get_metadata()` - Obtener metadata del proyecto
+- ✅ `compare_iterations()` - Comparación básica entre dos iteraciones
+- ✅ `compare_with_latest()` - Comparar con la última iteración
+- ✅ `rollback_to()` - Rollback a iteración anterior
+- ✅ `delete_iteration()` - Eliminar iteración específica
+- ✅ `save_decision()` - Guardar decisiones
+- ✅ `get_decisions()` - Obtener decisiones
+- ✅ `get_summary()` - Resumen del proyecto
+- ✅ `exists()` - Verificar si proyecto existe
+
+### Estado Actual
+- VersionManager implementado y compilando correctamente
+- Falta crear suite de tests
+- Falta exportar en __init__.py
+- Falta validación end-to-end
+
+### Próximos Pasos Inmediatos
+1. **Crear `tests/test_version_manager.py`** con los siguientes tests:
+   - `test_version_manager_initialization`
+   - `test_save_and_get_iteration`
+   - `test_list_iterations`
+   - `test_get_latest_iteration`
+   - `test_compare_iterations`
+   - `test_rollback_to`
+   - `test_get_summary`
+   - `test_integration_with_file_storage`
+
+2. **Actualizar `arqsysia/core/__init__.py`**:
+```python
+   from .version_manager import VersionManager
+   # Agregar a __all__
+```
+
+3. **Ejecutar tests**: `pytest tests/test_version_manager.py -v`
+
+4. **Validación final**: Verificar imports y funcionalidad completa
+
+### Notas Técnicas
+- VersionManager es un wrapper sobre StorageBackend
+- Proporciona operaciones de alto nivel más simples
+- Incluye validaciones (e.g., project_name matching)
+- Comparación básica implementada (diff completo en Sesión 10)
+- Diseño permite cambiar backend (FileStorage → SQLite en futuro)
+
+---
+
+---
+
 ## Sesión 7 - FileStorage Completo
 **Fecha:** 21 de Octubre, 2025  
 **Duración:** ~3 horas  
