@@ -83,10 +83,19 @@ class ProjectState:
     Mantiene toda la información generada por cada fase,
     metadata temporal, y permite serialización/deserialización.
     """
-    # Identificación
+# Identificación
     project_name: str
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    # === Metadata de iteración (NUEVO para v1.0) ===
+    iteration: int = 1
+    parent_iteration: Optional[int] = None
+    created_at: datetime = field(default_factory=datetime.now)
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    # === Feedback context (NUEVO para v1.0) ===
+    user_feedback: Optional[str] = None
+    previous_issues: List[Dict] = field(default_factory=list)
+    changes_from_previous: Optional[str] = None
     
     # Estado del pipeline
     current_phase: str = PipelinePhase.INITIALIZED.value
@@ -108,7 +117,8 @@ class ProjectState:
     # Metadata adicional
     metadata: Dict[str, Any] = field(default_factory=dict)
     # Outputs genéricos de las fases
-    outputs: Dict[str, Any] = field(default_factory=dict)    
+    outputs: Dict[str, Any] = field(default_factory=dict)
+    
     def update_phase(self, phase: PipelinePhase):
         """Actualiza la fase actual del pipeline."""
         self.current_phase = phase.value
@@ -142,7 +152,6 @@ class ProjectState:
         """
         return self.outputs.get(key, default)
             
-    def set_analysis_result(self, analysis: AnalysisResult):
         """Establece resultado de análisis (Fase 1)."""
         self.analysis = analysis
         self.updated_at = datetime.now().isoformat()
@@ -159,8 +168,14 @@ class ProjectState:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convierte el estado a diccionario."""
-        return asdict(self)
-    
+        data = asdict(self)
+        
+        # Convertir datetime a string para serialización JSON
+        if isinstance(data.get('created_at'), datetime):
+            data['created_at'] = data['created_at'].isoformat()
+        
+        return data
+            
     def to_json(self, indent: int = 2) -> str:
         """Convierte el estado a JSON."""
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
