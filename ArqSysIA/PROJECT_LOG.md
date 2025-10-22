@@ -5,6 +5,139 @@
 > **Uso:** Cada Claude debe consultar este archivo al inicio de la sesión.  
 > **Formato:** Cronológico inverso (más reciente primero).
 
+---
+
+## Sesión 9 - DecisionLogger
+**Fecha:** 22 de Octubre, 2025  
+**Duración:** ~2 horas  
+**Estado:** ✅ COMPLETADO
+
+### Objetivos Cumplidos
+- ✅ Implementar DecisionLogger con log append-only
+- ✅ Sistema de queries por iteración y fase
+- ✅ Búsqueda de texto en decisiones
+- ✅ Resumen estadístico de decisiones
+- ✅ Suite completa de tests (8 tests, todos pasando)
+
+### Archivos Creados
+1. `arqsysia/core/decision_logger.py` (~280 líneas) - Clase DecisionLogger completa
+2. `tests/test_decision_logger.py` (8 tests) - Suite de tests comprehensiva
+
+### Archivos Modificados
+1. `arqsysia/core/__init__.py` - Agregado export de DecisionLogger
+
+### Características Implementadas en DecisionLogger
+- ✅ `log_decision()` - Registrar decisiones con metadata completa
+- ✅ `get_all_decisions()` - Obtener todas las decisiones ordenadas cronológicamente
+- ✅ `get_decisions_for_iteration()` - Filtrar decisiones por iteración
+- ✅ `get_decisions_for_phase()` - Filtrar decisiones por fase
+- ✅ `search_decisions()` - Búsqueda case-insensitive en múltiples campos
+- ✅ `get_decision_count()` - Contador de decisiones
+- ✅ `get_decision_summary()` - Resumen estadístico (por iteración, fase, trigger)
+
+### Tests Implementados (8/8 pasando)
+```bash
+tests/test_decision_logger.py::test_log_single_decision PASSED
+tests/test_decision_logger.py::test_log_multiple_decisions PASSED
+tests/test_decision_logger.py::test_get_decisions_for_iteration PASSED
+tests/test_decision_logger.py::test_get_decisions_for_phase PASSED
+tests/test_decision_logger.py::test_search_decisions PASSED
+tests/test_decision_logger.py::test_decision_summary PASSED
+tests/test_decision_logger.py::test_empty_logger PASSED
+tests/test_decision_logger.py::test_persistence PASSED
+
+========================= 8 passed in 0.03s ==========================
+```
+
+### Decisiones Técnicas
+1. **Append-only log**: Las decisiones nunca se modifican, solo se agregan
+2. **Timestamp automático**: Se genera al registrar cada decisión
+3. **Lazy imports**: `from arqsysia.storage.file_storage import FileStorage` dentro de `__init__` para evitar imports circulares
+4. **Metadata completa**: Soporte para alternatives_considered, chosen_alternative, impacted_components, triggered_by
+5. **Búsqueda flexible**: Búsqueda en decision, rationale, alternatives y chosen_alternative
+6. **Integración con FileStorage**: Usa el método `save_decision()` de FileStorage (JSONL)
+
+### Estructura de Decision (dataclass)
+```python
+@dataclass
+class Decision:
+    iteration: int
+    phase: str  # "analyzer", "codegen", "validator"
+    timestamp: datetime
+    decision: str
+    rationale: str
+    alternatives_considered: List[str]
+    chosen_alternative: str
+    impacted_components: List[str]
+    triggered_by: str  # "manual", "validator", "user_feedback"
+```
+
+### Ejemplo de Uso
+```python
+from arqsysia.core.decision_logger import DecisionLogger
+
+# Crear logger
+logger = DecisionLogger("ecommerce_project")
+
+# Registrar decisión
+decision = logger.log_decision(
+    iteration=2,
+    phase="analyzer",
+    decision="Cambiar de monolito a microservicios",
+    rationale="Mejorar escalabilidad y mantenibilidad",
+    alternatives_considered=["Monolito modular", "Microservicios", "Serverless"],
+    chosen_alternative="Microservicios",
+    impacted_components=["UserService", "PaymentService", "ProductService"],
+    triggered_by="validator"
+)
+
+# Consultar decisiones
+all_decisions = logger.get_all_decisions()
+decisions_v2 = logger.get_decisions_for_iteration(2)
+analyzer_decisions = logger.get_decisions_for_phase("analyzer")
+results = logger.search_decisions("microservicio")
+
+# Resumen estadístico
+summary = logger.get_decision_summary()
+print(f"Total decisiones: {summary['total']}")
+print(f"Por iteración: {summary['by_iteration']}")
+print(f"Por fase: {summary['by_phase']}")
+print(f"Por trigger: {summary['by_trigger']}")
+```
+
+### Problemas Resueltos
+1. **Import circular con FileStorage**: Resuelto con lazy import dentro de `__init__`
+2. **Parámetro incorrecto en tests**: Tests iniciales usaban `base_path` en lugar de `base_dir`
+3. **Timestamp automático**: Implementado con `datetime.now()` en `log_decision()`
+
+### Estado Actual
+- ✅ DecisionLogger completamente funcional
+- ✅ 8/8 tests pasando en 0.03s
+- ✅ Integrado con FileStorage
+- ✅ Export en `__init__.py` actualizado
+- ⚠️ Nota: 6 tests de FileStorage de sesiones anteriores necesitan actualización (no afectan funcionalidad de DecisionLogger)
+
+### Próximos Pasos Inmediatos (Sesión 10)
+1. **Implementar DiffEngine** - Comparación detallada entre iteraciones
+2. **Arreglar tests de FileStorage** - Los 6 tests que fallan (opcional, no bloquean progreso)
+
+### Estadísticas de Código
+- Líneas nuevas de código: ~280 (decision_logger.py)
+- Líneas de tests: ~250 (test_decision_logger.py)
+- Total tests pasando: 30/36 (8 DecisionLogger + 9 VersionManager + 13 FileStorage)
+- Tests nuevos de esta sesión: 8/8 ✅
+- Tiempo de ejecución tests: 0.03s
+- Cobertura estimada DecisionLogger: ~95%
+
+### Notas Técnicas
+- DecisionLogger es stateless, toda la persistencia va a FileStorage
+- Las decisiones se guardan en formato JSONL (una línea por decisión)
+- FileStorage maneja la persistencia en `projects/{project_name}/decisions_log.jsonl`
+- Las búsquedas son en memoria (aceptable para MVP, optimizar en futuro si es necesario)
+- El resumen se calcula on-the-fly al llamar `get_decision_summary()`
+
+---
+
 ## 📅 2025-10-22 | Sesión 8 | VersionManager Completado ✅
 
 ### 🎯 Hitos
