@@ -18,7 +18,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from arqsysia.clients.ollama_client import OllamaClient
-from arqsysia.core.state import ProjectState, StateManager
+from arqsysia.core.state import ProjectState
 from arqsysia.phases.analyzer import AnalyzerPhase
 from arqsysia.phases.codegen import CodeGenPhase
 from arqsysia.phases.validator import ValidatorPhase
@@ -32,7 +32,7 @@ class PipelineOrchestrator:
     def __init__(
         self,
         ollama_client: OllamaClient,
-        state_manager: Optional[StateManager] = None,
+        #state_manager: Optional[StateManager] = None,
         interactive: bool = True
     ):
         """
@@ -44,7 +44,7 @@ class PipelineOrchestrator:
             interactive: Si True, solicita aprobación entre fases
         """
         self.ollama_client = ollama_client
-        self.state_manager = state_manager or StateManager()
+        #self.state_manager = state_manager or StateManager()
         self.interactive = interactive
         
         # Métricas
@@ -340,7 +340,7 @@ def create_orchestrator(
         PipelineOrchestrator configurado
     """
     ollama_client = OllamaClient()
-    state_manager = StateManager()
+    #state_manager = StateManager()
     
     return PipelineOrchestrator(
         ollama_client=ollama_client,
