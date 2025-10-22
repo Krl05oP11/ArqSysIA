@@ -9,10 +9,7 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 from .base import StorageBackend
-from ..core.iteration import Iteration
-from ..core.decision import Decision
-from ..core.metadata import ProjectMetadata
-
+from arqsysia.core.state import Iteration, Decision, ProjectMetadata, ProjectState
 
 class FileStorage(StorageBackend):
     """
@@ -94,7 +91,7 @@ class FileStorage(StorageBackend):
         
         # Actualizar metadata
         self._update_metadata_on_save(iteration)
-    
+
     def load_iteration(self, project_name: str, iteration_number: int) -> Optional[Iteration]:
         """
         Carga una iteración específica.
@@ -109,15 +106,18 @@ class FileStorage(StorageBackend):
         iteration_file = self._get_iteration_file(project_name, iteration_number)
         
         if not iteration_file.exists():
-            return None
+            raise FileNotFoundError(
+                f"Iteration {iteration_number} not found for project {project_name}"
+            )
         
+        # Cargar JSON
         with open(iteration_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
         # Reconstruir objeto Iteration
         return self._dict_to_iteration(data)
     
-    def list_iterations(self, project_name: str) -> List[Dict]:
+    def list_iterations(self, project_name: str) -> List[Iteration]:
         """
         Lista todas las iteraciones de un proyecto.
         
@@ -125,7 +125,7 @@ class FileStorage(StorageBackend):
             project_name: Nombre del proyecto
             
         Returns:
-            Lista de diccionarios con información básica de cada iteración
+            Lista de objetos Iteration
         """
         iterations_dir = self._get_iterations_dir(project_name)
         
@@ -134,17 +134,18 @@ class FileStorage(StorageBackend):
         
         iterations = []
         for iteration_file in sorted(iterations_dir.glob("iteration_*.json")):
-            with open(iteration_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            # Extraer info básica
-            iterations.append({
-                "iteration_number": data["iteration_number"],
-                "created_at": data["created_at"],
-                "duration_seconds": data["duration_seconds"],
-                "status": data["status"],
-                "final_scores": data.get("final_scores", {})
-            })
+            # Extraer número de iteración del nombre del archivo
+            filename = iteration_file.stem  # "iteration_1"
+            iteration_number = int(filename.split("_")[1])
+            
+            # Cargar la iteración completa
+            try:
+                iteration = self.load_iteration(project_name, iteration_number)
+                if iteration:
+                    iterations.append(iteration)
+            except Exception as e:
+                print(f"Warning: Could not load iteration {iteration_number}: {e}")
+                continue
         
         return iterations
     
@@ -268,7 +269,10 @@ class FileStorage(StorageBackend):
     
     def _update_metadata_on_save(self, iteration: Iteration) -> None:
         """Actualiza metadata cuando se guarda una iteración"""
-        metadata = self.load_metadata(iteration.project_name)
+        try:
+            metadata = self.load_metadata(iteration.project_name)
+        except FileNotFoundError:
+            metadata = None
         
         if metadata is None:
             # Crear metadata inicial
@@ -279,21 +283,17 @@ class FileStorage(StorageBackend):
                 total_iterations=1,
                 current_iteration=iteration.iteration_number,
                 storage_backend="file",
-                total_duration_seconds=iteration.duration_seconds,  # FIX: Inicializar con la duración
-                average_iteration_time=iteration.duration_seconds   # FIX: Primera iteración = promedio
+                storage_path=str(self.base_dir),
+                total_decisions=len(iteration.decisions)
             )
         else:
             # Actualizar metadata existente
-            metadata.last_updated = datetime.now()
+            metadata.last_updated = iteration.created_at
             metadata.total_iterations = max(metadata.total_iterations, iteration.iteration_number)
             metadata.current_iteration = iteration.iteration_number
-            metadata.total_duration_seconds += iteration.duration_seconds
-            
-            if metadata.total_iterations > 0:
-                metadata.average_iteration_time = (
-                    metadata.total_duration_seconds / metadata.total_iterations
-                )
+            metadata.total_decisions += len(iteration.decisions)
         
+        # Guardar metadata actualizada
         self.save_metadata(metadata)
             
     def _update_metadata_on_delete(self, project_name: str, iteration_number: int) -> None:
@@ -306,7 +306,7 @@ class FileStorage(StorageBackend):
             metadata.total_iterations = len(iterations)
             
             if iterations:
-                metadata.current_iteration = max(i["iteration_number"] for i in iterations)
+                metadata.current_iteration = max(i.iteration_number for i in iterations)
             else:
                 metadata.current_iteration = 0
             
@@ -360,8 +360,7 @@ class FileStorage(StorageBackend):
             total_iterations=data.get("total_iterations", 0),
             current_iteration=data.get("current_iteration", 0),
             storage_backend=data.get("storage_backend", "file"),
-            models_used=data.get("models_used", {}),
-            total_duration_seconds=data.get("total_duration_seconds", 0.0),
-            average_iteration_time=data.get("average_iteration_time", 0.0)
+            storage_path=data.get("storage_path", ""),
+            total_decisions=data.get("total_decisions", 0)
         )
-
+        

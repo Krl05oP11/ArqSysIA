@@ -1,14 +1,19 @@
-from .state import ProjectState
-from .iteration import Iteration
-from .decision import Decision
-from .metadata import ProjectMetadata
-from .orchestrator import PipelineOrchestrator
+"""
+arqsysia/core/__init__.py
+
+Exporta los componentes principales del core de ArqSysIA v1.0
+"""
+
+from .state import ProjectState, Iteration, Decision, ProjectMetadata
+from .orchestrator import PipelineOrchestrator as Orchestrator
+from .version_manager import VersionManager
 
 __all__ = [
     'ProjectState',
     'Iteration',
     'Decision',
     'ProjectMetadata',
-    'PipelineOrchestrator',
+    'Orchestrator',
+    'VersionManager'  # ← NUEVO - Sesión 8
 ]
 

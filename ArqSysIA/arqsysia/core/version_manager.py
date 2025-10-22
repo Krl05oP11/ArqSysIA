@@ -1,15 +1,13 @@
 """
 VersionManager - Gestor de versiones e iteraciones del proyecto
 """
-
-from typing import List, Optional, Dict, Any
 from pathlib import Path
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
+from arqsysia.storage.base import StorageBackend
+from arqsysia.core.state import Iteration, ProjectState, Decision, ProjectMetadata
 
-from ..storage.base import StorageBackend
-from ..storage.file_storage import FileStorage
-from .iteration import Iteration
-from .decision import Decision
-from .metadata import ProjectMetadata
+if TYPE_CHECKING:
+    from arqsysia.storage.file_storage import FileStorage
 
 
 class VersionManager:
@@ -38,28 +36,64 @@ class VersionManager:
             base_dir: Directorio base para proyectos
         """
         self.project_name = project_name
-        self.storage = storage or FileStorage(base_dir=base_dir)
+        
+        # Import lazy para evitar circular import
+        if storage is None:
+            from arqsysia.storage.file_storage import FileStorage
+            storage = FileStorage(base_dir=base_dir)
+        
+        self.storage = storage
     
     # ============================================================
     # OPERACIONES BÁSICAS
     # ============================================================
     
-    def save_iteration(self, iteration: Iteration) -> None:
+    def save_iteration(
+        self,
+        state: ProjectState,
+        decisions: List[Decision] = None,
+        duration: float = 0.0,
+        phase_durations: Dict[str, float] = None
+    ) -> Iteration:
         """
-        Guarda una iteración.
+        Guarda una nueva iteración.
         
         Args:
-            iteration: Iteración a guardar
+            state: Estado del proyecto en esta iteración
+            decisions: Lista de decisiones tomadas
+            duration: Duración total en segundos
+            phase_durations: Duración por fase
+            
+        Returns:
+            Iteration guardada
         """
-        if iteration.project_name != self.project_name:
-            raise ValueError(
-                f"Project name mismatch: expected '{self.project_name}', "
-                f"got '{iteration.project_name}'"
-            )
+        if decisions is None:
+            decisions = []
+        if phase_durations is None:
+            phase_durations = {}
         
+        # Extraer scores del estado
+        final_scores = state.outputs.get("validation", {}).get("scores", {})
+        
+        # Crear objeto Iteration
+        iteration = Iteration(
+            project_name=self.project_name,
+            iteration_number=state.iteration,
+            state=state,
+            decisions=decisions,
+            created_at=state.created_at,
+            duration_seconds=duration,
+            phase_durations=phase_durations,
+            final_scores=final_scores,
+            status="completed"
+        )
+        
+        # Guardar usando el storage
         self.storage.save_iteration(iteration)
+        
+        return iteration
     
-    def get_iteration(self, iteration_number: int) -> Optional[Iteration]:
+    def get_iteration(self, iteration_number: int) -> Iteration:
         """
         Obtiene una iteración específica.
         
@@ -67,34 +101,44 @@ class VersionManager:
             iteration_number: Número de iteración
             
         Returns:
-            Iteration o None si no existe
+            Iteration
+            
+        Raises:
+            FileNotFoundError: Si la iteración no existe
         """
-        return self.storage.load_iteration(self.project_name, iteration_number)
+        try:
+            iteration = self.storage.load_iteration(self.project_name, iteration_number)
+            if iteration is None:
+                raise FileNotFoundError(f"Iteration {iteration_number} not found in project {self.project_name}")
+            return iteration
+        except FileNotFoundError:
+            raise
+        except Exception as e:
+            raise FileNotFoundError(f"Iteration {iteration_number} not found: {str(e)}")
     
-    def list_iterations(self) -> List[Dict]:
+    def list_iterations(self) -> List[Iteration]:
         """
         Lista todas las iteraciones del proyecto.
         
         Returns:
-            Lista de diccionarios con info básica de cada iteración
+            Lista de objetos Iteration
         """
         return self.storage.list_iterations(self.project_name)
     
     def get_latest_iteration(self) -> Optional[Iteration]:
         """
         Obtiene la última iteración del proyecto.
-        
+    
         Returns:
             Iteration más reciente o None si no hay iteraciones
         """
         iterations = self.list_iterations()
-        
+    
         if not iterations:
             return None
-        
-        # Obtener el número de la última iteración
-        latest_number = max(i["iteration_number"] for i in iterations)
-        
+    
+        # Encontrar la iteración con el número más alto
+        latest_number = max(i.iteration_number for i in iterations)
         return self.get_iteration(latest_number)
     
     def get_metadata(self) -> Optional[ProjectMetadata]:
@@ -116,50 +160,52 @@ class VersionManager:
         iteration_b: int
     ) -> Dict[str, Any]:
         """
-        Compara dos iteraciones (versión básica).
+        Compara dos iteraciones.
         
         Args:
             iteration_a: Número de primera iteración
             iteration_b: Número de segunda iteración
             
         Returns:
-            Diccionario con diferencias básicas
+            Diccionario con diferencias detalladas
         """
         iter_a = self.get_iteration(iteration_a)
         iter_b = self.get_iteration(iteration_b)
         
-        if not iter_a or not iter_b:
-            raise ValueError("Una o ambas iteraciones no existen")
+        # Comparar arquitectura
+        arch_a = iter_a.state.outputs.get("analysis", {}).get("architecture", "")
+        arch_b = iter_b.state.outputs.get("analysis", {}).get("architecture", "")
         
-        # Comparación básica
-        diff = {
-            "iteration_a": iteration_a,
-            "iteration_b": iteration_b,
-            "duration_diff": iter_b.duration_seconds - iter_a.duration_seconds,
-            "scores_a": iter_a.final_scores,
-            "scores_b": iter_b.final_scores,
-            "scores_changed": iter_a.final_scores != iter_b.final_scores,
-            "requirements_changed": (
-                iter_a.state.original_requirements != 
-                iter_b.state.original_requirements
-            ),
-            "decisions_count_a": len(iter_a.decisions),
-            "decisions_count_b": len(iter_b.decisions),
+        architecture_changed = {
+            "changed": arch_a != arch_b,
+            "previous": arch_a,
+            "current": arch_b
+        }
+        
+        # Comparar componentes
+        comps_a = set(iter_a.state.outputs.get("analysis", {}).get("components", []))
+        comps_b = set(iter_b.state.outputs.get("analysis", {}).get("components", []))
+        
+        components_changed = {
+            "added": list(comps_b - comps_a),
+            "removed": list(comps_a - comps_b),
+            "modified": []  # Básico por ahora
         }
         
         # Calcular diferencias en scores
+        scores_diff = {}
         if iter_a.final_scores and iter_b.final_scores:
-            score_diffs = {}
             all_keys = set(iter_a.final_scores.keys()) | set(iter_b.final_scores.keys())
-            
             for key in all_keys:
                 score_a = iter_a.final_scores.get(key, 0)
                 score_b = iter_b.final_scores.get(key, 0)
-                score_diffs[key] = score_b - score_a
-            
-            diff["score_diffs"] = score_diffs
+                scores_diff[key] = score_b - score_a
         
-        return diff
+        return {
+            "architecture_changed": architecture_changed,
+            "components_changed": components_changed,
+            "scores_diff": scores_diff
+        }
     
     def compare_with_latest(self, iteration_number: int) -> Dict[str, Any]:
         """
@@ -192,20 +238,18 @@ class VersionManager:
         iterations = self.list_iterations()
         
         if not iterations:
-            raise ValueError("No hay iteraciones para hacer rollback")
+            return  # No hay nada que hacer
+            # raise ValueError("No hay iteraciones para hacer rollback")
         
         # Verificar que la iteración existe
         if not self.get_iteration(iteration_number):
             raise ValueError(f"La iteración {iteration_number} no existe")
         
         # Eliminar todas las iteraciones posteriores
-        for iter_info in iterations:
-            if iter_info["iteration_number"] > iteration_number:
-                self.storage.delete_iteration(
-                    self.project_name, 
-                    iter_info["iteration_number"]
-                )
-    
+        for iteration in iterations:
+            if iteration.iteration_number > iteration_number:
+                self.storage.delete_iteration(self.project_name, iteration.iteration_number)
+                    
     def delete_iteration(self, iteration_number: int) -> None:
         """
         Elimina una iteración específica.
