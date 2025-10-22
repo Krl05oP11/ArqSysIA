@@ -1,19 +1,21 @@
 """
-arqsysia/core/__init__.py
-
-Exporta los componentes principales del core de ArqSysIA v1.0
+Core module for ArqSysIA - Contains core business logic.
 """
 
-from .state import ProjectState, Iteration, Decision, ProjectMetadata
-from .orchestrator import PipelineOrchestrator as Orchestrator
-from .version_manager import VersionManager
+from arqsysia.core.state import (
+    ProjectState,
+    Iteration,
+    Decision,
+    ProjectMetadata
+)
+from arqsysia.core.version_manager import VersionManager
+from arqsysia.core.decision_logger import DecisionLogger
 
 __all__ = [
     'ProjectState',
     'Iteration',
     'Decision',
     'ProjectMetadata',
-    'Orchestrator',
-    'VersionManager'  # ← NUEVO - Sesión 8
+    'VersionManager',
+    'DecisionLogger',
 ]
-
