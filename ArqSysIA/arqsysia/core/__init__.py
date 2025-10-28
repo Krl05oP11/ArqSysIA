@@ -1,15 +1,14 @@
 """
-Core module for ArqSysIA - Contains core business logic.
+Core module for ArqSysIA.
+
+This module contains the core components for managing project state,
+iterations, decisions, and version control.
 """
 
-from arqsysia.core.state import (
-    ProjectState,
-    Iteration,
-    Decision,
-    ProjectMetadata
-)
-from arqsysia.core.version_manager import VersionManager
-from arqsysia.core.decision_logger import DecisionLogger
+from .state import ProjectState, Iteration, Decision, ProjectMetadata
+from .version_manager import VersionManager
+from .decision_logger import DecisionLogger
+from .diff_engine import DiffEngine, DiffResult
 
 __all__ = [
     'ProjectState',
@@ -18,4 +17,6 @@ __all__ = [
     'ProjectMetadata',
     'VersionManager',
     'DecisionLogger',
+    'DiffEngine',
+    'DiffResult',
 ]
