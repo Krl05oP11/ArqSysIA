@@ -1,0 +1,22 @@
+# Documentation
+include README.md
+include CHANGELOG.md
+include LICENSE
+
+# Requirements
+include requirements.txt
+
+# Type hints marker
+include arqsysia/py.typed
+
+# Configuration files
+include setup.py
+
+# Exclude development files
+exclude .gitignore
+exclude .git
+recursive-exclude tests *
+recursive-exclude docs *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * *.egg-info

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  arqsysia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: arqsysia:latest
+    container_name: arqsysia
+    volumes:
+      # Mount projects directory for persistence
+      - ./projects:/app/projects
+      # Mount local Ollama socket (if using Ollama on host)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ARQSYSIA_DATA_DIR=/app/projects
+      - OLLAMA_HOST=host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stdin_open: true
+    tty: true
+    command: MyProject
+    networks:
+      - arqsysia-network
+
+networks:
+  arqsysia-network:
+    driver: bridge
+
+volumes:
+  arqsysia-projects:
+    driver: local
