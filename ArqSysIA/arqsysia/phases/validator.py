@@ -60,9 +60,9 @@ class ValidatorPhase(BasePhase):
         
         # Validar que existan outputs previos (compatible con versiones anteriores)
         has_analysis = (
-            state.get_output("analysis_complete") or 
-            state.get_output("analysis") is not None or
-            state.get_output("architecture_analysis") is not None
+            state.outputs.get("analysis_complete") or 
+            state.outputs.get("analysis") is not None or
+            state.outputs.get("architecture_analysis") is not None
         )
         if not has_analysis:
             raise ValueError("Analyzer debe ejecutarse antes del Validator")
@@ -77,9 +77,9 @@ class ValidatorPhase(BasePhase):
         
         # 2. Validar código (si existe) - compatible con versiones anteriores
         has_codegen = (
-            state.get_output("codegen_complete") or 
-            state.get_output("file_structure") is not None or
-            state.get_output("generated_files") is not None
+            state.outputs.get("codegen_complete") or 
+            state.outputs.get("file_structure") is not None or
+            state.outputs.get("generated_files") is not None
         )
         if has_codegen:
             print("\n💻 Validando código generado...")
@@ -97,12 +97,12 @@ class ValidatorPhase(BasePhase):
         validation_results["optimizations"] = optimizations
         
         # Guardar resultados en el estado
-        state.set_output("validation_results", validation_results)
-        state.set_output("validation_complete", True)
+        state.outputs["validation"]["validation_results"] = validation_results
+        state.outputs["validation"]["validation_complete"] = True
         
         # Generar reporte consolidado
         report = self._generate_report(validation_results)
-        state.set_output("validation_report", report)
+        state.outputs["validation"]["validation_report"] = report
         
         print(f"\n✅ Validación completada")
         print(f"{'='*60}\n")
@@ -443,8 +443,8 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
         
         # Intentar obtener análisis de múltiples versiones
         analysis = (
-            state.get_output("architecture_analysis") or 
-            state.get_output("analysis") or 
+            state.outputs.get("architecture_analysis") or 
+            state.outputs.get("analysis") or 
             {}
         )
         
@@ -488,7 +488,7 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
         ]
         
         # Estructura de archivos
-        file_structure = state.get_output("file_structure")
+        file_structure = state.outputs.get("file_structure")
         if file_structure:
             if isinstance(file_structure, dict):
                 context_parts.append(f"\nEstructura de archivos generada")
@@ -496,7 +496,7 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
                 context_parts.append(f"\nEstructura de archivos: {len(file_structure)} nodos")
         
         # Archivos generados - CORREGIDO: manejar como dict
-        generated_files = state.get_output("generated_files")
+        generated_files = state.outputs.get("generated_files")
         if generated_files:
             if isinstance(generated_files, dict):
                 context_parts.append(f"\nArchivos clave generados: {len(generated_files)}")
@@ -513,7 +513,7 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
         
         # Fallback a key_files si existe
         if not generated_files:
-            key_files = state.get_output("key_files")
+            key_files = state.outputs.get("key_files")
             if key_files and isinstance(key_files, list):
                 context_parts.append(f"\nArchivos clave: {len(key_files)}")
                 for file_info in key_files[:3]:
@@ -522,7 +522,7 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
                         context_parts.append(f"  - {filename}")
         
         # Scripts
-        setup_scripts = state.get_output("setup_scripts")
+        setup_scripts = state.outputs.get("setup_scripts")
         if setup_scripts:
             if isinstance(setup_scripts, dict):
                 context_parts.append(f"\nScripts de setup: {len(setup_scripts)}")
@@ -540,8 +540,8 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
         
         # Análisis (compatible con versiones)
         analysis = (
-            state.get_output("architecture_analysis") or 
-            state.get_output("analysis") or 
+            state.outputs.get("architecture_analysis") or 
+            state.outputs.get("analysis") or 
             {}
         )
         
@@ -580,8 +580,8 @@ IMPORTANTE: Responde SOLO con un objeto JSON válido (sin markdown):
         
         # Análisis (compatible con versiones)
         analysis = (
-            state.get_output("architecture_analysis") or 
-            state.get_output("analysis") or 
+            state.outputs.get("architecture_analysis") or 
+            state.outputs.get("analysis") or 
             {}
         )
         

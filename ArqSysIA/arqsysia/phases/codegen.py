@@ -50,33 +50,33 @@ class CodeGenPhase(BasePhase):
         self.log("Iniciando fase de generación de código...")
         
         # Validar que tengamos análisis previo
-        if not state.metadata.get("phase_1_complete"):
+        if not state.outputs.get("analysis", {}).get("analysis"):
             raise ValueError("El análisis (Fase 1) debe completarse antes del CodeGen")
         
         try:
             # 1. Generar estructura de archivos
             self.log("Generando estructura de archivos...")
             file_structure = self._generate_file_structure(state)
-            state.set_output("file_structure", file_structure)
+            state.outputs["code_generation"]["file_structure"] = file_structure
             
             # 2. Generar código de archivos clave
             self.log("Generando código de archivos principales...")
             generated_files = self._generate_key_files(state)
-            state.set_output("generated_files", generated_files)
+            state.outputs["code_generation"]["generated_files"] = generated_files
             
             # 3. Generar scripts de setup
             self.log("Generando scripts de configuración...")
             setup_scripts = self._generate_setup_scripts(state)
-            state.set_output("setup_scripts", setup_scripts)
+            state.outputs["code_generation"]["setup_scripts"] = setup_scripts
             
             # 4. Generar documentación técnica
             self.log("Generando documentación técnica...")
             technical_docs = self._generate_technical_docs(state)
-            state.set_output("technical_documentation", technical_docs)
+            state.outputs["code_generation"]["technical_documentation"] = technical_docs
             
             # Marcar fase como completada
-            state.metadata["phase_2_complete"] = True
-            state.metadata["phase_2_duration"] = "N/A"  # Se puede agregar tracking de tiempo
+            
+              # Se puede agregar tracking de tiempo
             
             self.log("✅ Fase de generación de código completada")
             return state
@@ -134,7 +134,7 @@ class CodeGenPhase(BasePhase):
     def _build_file_structure_prompt(self, state: ProjectState) -> str:
         """Construye el prompt para generar estructura de archivos."""
         
-        analysis = state.get_output("analysis")
+        analysis = state.outputs.get("analysis", {}).get("analysis", {})
         
         prompt = f"""Eres un arquitecto de software experto. Tu tarea es generar la estructura COMPLETA de archivos y directorios para el siguiente proyecto.
 
@@ -202,8 +202,8 @@ Genera la estructura ahora:"""
     def _build_key_files_prompt(self, state: ProjectState) -> str:
         """Construye el prompt para generar archivos clave."""
         
-        analysis = state.get_output("analysis")
-        file_structure = state.get_output("file_structure")
+        analysis = state.outputs.get("analysis", {}).get("analysis", {})
+        file_structure = state.outputs.get("code_generation", {}).get("file_structure", {})
         
         prompt = f"""Eres un desarrollador experto. Tu tarea es generar el CÓDIGO INICIAL de los archivos más importantes del proyecto.
 
@@ -253,7 +253,7 @@ Genera los archivos ahora:"""
     def _build_setup_scripts_prompt(self, state: ProjectState) -> str:
         """Construye el prompt para generar scripts de setup."""
         
-        analysis = state.get_output("analysis")
+        analysis = state.outputs.get("analysis", {}).get("analysis", {})
         
         prompt = f"""Eres un DevOps experto. Genera scripts de configuración y deployment para el proyecto.
 
@@ -303,7 +303,7 @@ Genera los scripts ahora:"""
     def _build_technical_docs_prompt(self, state: ProjectState) -> str:
         """Construye el prompt para generar documentación técnica."""
         
-        analysis = state.get_output("analysis")
+        analysis = state.outputs.get("analysis", {}).get("analysis", {})
         
         prompt = f"""Eres un technical writer experto. Genera documentación técnica completa para el proyecto.
 

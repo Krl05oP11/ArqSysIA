@@ -77,8 +77,8 @@ class AnalyzerPhase(BasePhase):
         analysis = self._parse_analysis_response(response)
         
         # Guardar en el estado
-        state.set_output("analysis", analysis)
-        state.metadata["phase_1_complete"] = True
+        state.outputs["analysis"]["analysis"] = analysis
+        
         
         self.log("✅ Análisis completado exitosamente")
         return state

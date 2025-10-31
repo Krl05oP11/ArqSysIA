@@ -9,7 +9,7 @@ Orquesta el flujo completo de iteraciones con feedback loops:
 5. Persistencia automática de iteraciones
 
 Características:
-- Coordinación de Enhanced Phases (con contexto histórico)
+- Coordinación de Phases reales con LLMs (con contexto histórico)
 - Feedback loops completos
 - Menú interactivo post-validación
 - Registro automático de decisiones
@@ -30,11 +30,10 @@ from arqsysia.core import (
     Decision
 )
 from arqsysia.phases import (
-    EnhancedAnalyzer,
-    EnhancedCodeGen,
-    EnhancedValidator
+      AnalyzerPhase,
+      CodeGenPhase,
+      ValidatorPhase
 )
-
 
 @dataclass
 class IterationResult:
@@ -72,7 +71,7 @@ class IterationResult:
 
 class IterativeOrchestrator:
     """
-    Orquestador iterativo que coordina las Enhanced Phases en un flujo
+    Orquestador iterativo que coordina las Phases reales en un flujo
     completo con feedback loops y menú post-validación.
     """
     
@@ -84,6 +83,8 @@ class IterativeOrchestrator:
             project_name: Nombre del proyecto
             storage: Backend de almacenamiento (FileStorage o SQLiteStorage)
         """
+        from arqsysia.clients.ollama_client import OllamaClient
+        
         self.project_name = project_name
         self.storage = storage
         
@@ -92,25 +93,27 @@ class IterativeOrchestrator:
         self.decision_logger = DecisionLogger(project_name, storage)
         self.diff_engine = DiffEngine()
         
-        # Enhanced Phases (con contexto histórico)
-        self.analyzer = EnhancedAnalyzer(
-            self.version_manager,
-            self.decision_logger,
-            self.diff_engine
+        # Ollama client
+        self.ollama_client = OllamaClient()
+        
+        # Phases (con Ollama real)
+        self.analyzer = AnalyzerPhase(
+            ollama_client=self.ollama_client,
+            model_name="deepseek-r1:32b"
         )
-        self.codegen = EnhancedCodeGen(
-            self.version_manager,
-            self.decision_logger
+        self.codegen = CodeGenPhase(
+            ollama_client=self.ollama_client,
+            model_name="qwen2.5-coder:32b-instruct"
         )
-        self.validator = EnhancedValidator(
-            self.version_manager,
-            self.diff_engine
+        self.validator = ValidatorPhase(
+            ollama_client=self.ollama_client,
+            model_name="deepseek-r1:14b"
         )
         
         # Estado interno
         self.current_iteration = 0
         self.last_result: Optional[IterationResult] = None
-    
+
     def run_iteration(
         self,
         requirements: str,
@@ -149,17 +152,60 @@ class IterativeOrchestrator:
         phase_durations = {}
         
         try:
+            # Crear ProjectState inicial
+            parent_iteration = iteration_number - 1 if iteration_number > 1 else None
+            state = ProjectState(
+                project_name=self.project_name,
+                iteration=iteration_number,
+                parent_iteration=parent_iteration,
+                created_at=datetime.now(),
+                original_requirements=requirements,
+                outputs={
+                    'analysis': {
+                        'iteration': iteration_number,
+                        'timestamp': datetime.now().isoformat(),
+                        'requirements': requirements,
+                        'user_feedback': user_feedback,
+                        'has_context': parent_iteration is not None,
+                        'context_summary': self._get_context_summary(parent_iteration),
+                        'previous_decisions': self._get_previous_decisions(parent_iteration),
+                        'diff_summary': self._get_diff_summary(parent_iteration),
+                        'analysis': None  # Will be filled by analyzer
+                    },
+                    'code_generation': {
+                        'iteration': iteration_number,
+                        'timestamp': datetime.now().isoformat(),
+                        'has_previous_code': parent_iteration is not None,
+                        'reused_components': [],
+                        'modified_components': [],
+                        'new_components': [],
+                        'code_context': self._get_code_context(parent_iteration),
+                        'generation_strategy': 'full_generation' if parent_iteration is None else 'incremental'
+                    },
+                    'validation': {
+                        'iteration': iteration_number,
+                        'timestamp': datetime.now().isoformat(),
+                        'has_comparison': parent_iteration is not None,
+                        'trend_analysis': self._get_trend_analysis(parent_iteration),
+                        'regression_detection': None,
+                        'recommendations': [],
+                        'validation': None  # Will be filled by validator
+                    }
+                },
+                user_feedback=user_feedback,
+                previous_issues=[],
+                changes_from_previous=None,
+                execution_metrics={}
+            )
+            
             # FASE 1: Análisis arquitectural
             print("📊 FASE 1: Análisis Arquitectural")
             print("-" * 80)
+            print(f"🤖 Modelo: {self.analyzer.model_name}")
+            print("⏳ Analizando requerimientos y diseñando arquitectura...")
             phase_start = time.time()
             
-            analysis_result = self.analyzer.analyze(
-                requirements=requirements,
-                project_name=self.project_name,
-                current_iteration=iteration_number,
-                user_feedback=user_feedback
-            )
+            state = self.analyzer.run(state)
             
             phase_durations['analyzer'] = time.time() - phase_start
             print(f"✅ Análisis completado en {phase_durations['analyzer']:.2f}s")
@@ -168,14 +214,11 @@ class IterativeOrchestrator:
             # FASE 2: Generación de código
             print("💻 FASE 2: Generación de Código")
             print("-" * 80)
+            print(f"🤖 Modelo: {self.codegen.model_name}")
+            print("⏳ Generando código basado en la arquitectura...")
             phase_start = time.time()
             
-            codegen_result = self.codegen.generate(
-                analysis_result=analysis_result,
-                project_name=self.project_name,
-                current_iteration=iteration_number,
-                user_instructions=user_instructions
-            )
+            state = self.codegen.run(state)
             
             phase_durations['codegen'] = time.time() - phase_start
             print(f"✅ Generación completada en {phase_durations['codegen']:.2f}s")
@@ -184,28 +227,25 @@ class IterativeOrchestrator:
             # FASE 3: Validación
             print("🔍 FASE 3: Validación")
             print("-" * 80)
+            print(f"🤖 Modelo: {self.validator.model_name}")
+            print("⏳ Validando arquitectura y código generado...")
             phase_start = time.time()
             
-            validation_result = self.validator.validate(
-                codegen_result=codegen_result,
-                analysis_result=analysis_result,
-                project_name=self.project_name,
-                current_iteration=iteration_number
-            )
+            state = self.validator.run(state)
             
             phase_durations['validator'] = time.time() - phase_start
             print(f"✅ Validación completada en {phase_durations['validator']:.2f}s")
             print()
             
-            # Construir resultado de iteración
+            # Construir resultado de iteración desde el state
             iteration_duration = time.time() - iteration_start
             
             result = IterationResult(
                 iteration=iteration_number,
                 project_name=self.project_name,
-                analysis=analysis_result,
-                codegen=codegen_result,
-                validation=validation_result,
+                analysis=state.outputs.get('analysis', {}),
+                codegen=state.outputs.get('code_generation', {}),
+                validation=state.outputs.get('validation', {}),
                 timestamp=datetime.now(),
                 duration_seconds=iteration_duration,
                 phase_durations=phase_durations
@@ -245,71 +285,64 @@ class IterativeOrchestrator:
         5. Salir
         
         Args:
-            result: Resultado de la iteración actual
+            result: Resultado de la iteración a evaluar
             
         Returns:
-            Opción elegida ('accept', 'regenerate', 'redesign', 'details', 'exit')
+            Opción seleccionada ('accept', 'regenerate', 'redesign', 'details', 'exit')
         """
-        print()
-        print("=" * 80)
-        print("🛑 MENÚ POST-VALIDACIÓN")
-        print("=" * 80)
-        print()
-        print(f"Iteración {result.iteration} completada.")
-        print(f"Scores: {result.get_final_scores()}")
-        print(f"Issues detectados: {result.get_issues_count()}")
-        print()
-        print("¿Qué deseas hacer?")
-        print()
-        print("  1. ✅ Aceptar y continuar")
-        print("  2. 🔄 Regenerar código (con feedback específico)")
-        print("  3. 🎨 Rediseñar arquitectura (cambio mayor)")
-        print("  4. 📋 Ver detalles de validación")
-        print("  5. 🚪 Salir")
-        print()
-        
         while True:
-            try:
-                choice = input("Elige una opción (1-5): ").strip()
-                
-                if choice == '1':
-                    return 'accept'
-                elif choice == '2':
-                    return 'regenerate'
-                elif choice == '3':
-                    return 'redesign'
-                elif choice == '4':
-                    self._show_validation_details(result)
-                    # Volver a mostrar el menú
-                    continue
-                elif choice == '5':
-                    return 'exit'
-                else:
-                    print("❌ Opción inválida. Por favor elige 1-5.")
-                    
-            except KeyboardInterrupt:
-                print()
-                print("⚠️ Operación cancelada por el usuario")
+            print()
+            print("=" * 80)
+            print("📋 MENÚ POST-VALIDACIÓN")
+            print("=" * 80)
+            print()
+            print(f"Iteración {result.iteration} completada")
+            print(f"Score: {result.get_final_scores()}")
+            print(f"Issues: {result.get_issues_count()}")
+            print()
+            print("¿Qué deseas hacer?")
+            print()
+            print("  1. ✅ Aceptar y continuar")
+            print("  2. 🔄 Regenerar código (mantiene arquitectura)")
+            print("  3. 🎨 Rediseñar arquitectura (desde el análisis)")
+            print("  4. 📊 Ver detalles de validación")
+            print("  5. 🚪 Salir")
+            print()
+            
+            choice = input("➤ Selecciona opción (1-5): ").strip()
+            
+            if choice == '1':
+                return 'accept'
+            elif choice == '2':
+                return 'regenerate'
+            elif choice == '3':
+                return 'redesign'
+            elif choice == '4':
+                self._show_validation_details(result)
+                continue  # Volver a mostrar el menú
+            elif choice == '5':
                 return 'exit'
+            else:
+                print("❌ Opción inválida. Por favor selecciona 1-5.")
     
     def regenerate_code(
         self,
         previous_result: IterationResult,
-        user_feedback: str
+        user_instructions: str
     ) -> IterationResult:
         """
-        Regenera solo el código manteniendo la arquitectura.
-        Útil para ajustes pequeños sin cambiar el diseño arquitectural.
+        Regenera código manteniendo la arquitectura existente.
         
         Flujo:
-        1. Reutiliza el análisis de la iteración anterior
-        2. Ejecuta CodeGen con el feedback del usuario
-        3. Ejecuta Validator
-        4. Guarda como nueva iteración
+        1. Carga iteración anterior
+        2. Reutiliza análisis arquitectural
+        3. Ejecuta CodeGen con feedback del usuario
+        4. Ejecuta Validator
+        5. Guarda como nueva iteración
         
         Args:
             previous_result: Resultado de la iteración anterior
-            user_feedback: Feedback específico del usuario sobre qué mejorar
+            user_instructions: Feedback/instrucciones del usuario
             
         Returns:
             IterationResult con código regenerado
@@ -318,60 +351,78 @@ class IterativeOrchestrator:
         print("=" * 80)
         print("🔄 REGENERANDO CÓDIGO")
         print("=" * 80)
-        print(f"Manteniendo arquitectura de iteración {previous_result.iteration}")
-        print(f"Feedback: {user_feedback}")
+        print(f"Partiendo de iteración {previous_result.iteration}")
+        print(f"Manteniendo arquitectura, regenerando código con feedback")
+        print(f"Instrucciones: {user_instructions}")
         print("=" * 80)
         print()
         
         new_iteration = previous_result.iteration + 1
+        
+        # Registrar decisión de regeneración
+        self.decision_logger.log_decision(
+            iteration=new_iteration,
+            phase='orchestrator',
+            decision='Regenerate code',
+            rationale=f'User requested code regeneration: {user_instructions}',
+            alternatives_considered=['Accept current code', 'Redesign architecture'],
+            chosen_alternative='Regenerate with same architecture',
+            impacted_components=['codegen', 'validator'],
+            triggered_by='user_feedback'
+        )
+        
         iteration_start = time.time()
         phase_durations = {}
         
         try:
-            # Reutilizar análisis anterior (no regenerar)
-            analysis_result = previous_result.analysis
-            print("📊 Reutilizando análisis anterior")
-            print()
+            # Crear state reutilizando análisis anterior
+            requirements = previous_result.analysis.get('requirements', 'N/A')
             
-            # Registrar decisión de regeneración
-            self.decision_logger.log_decision(
+            state = ProjectState(
+                project_name=self.project_name,
                 iteration=new_iteration,
-                phase='orchestrator',
-                decision=f'Regenerate code only (keep architecture)',
-                rationale=f'User requested code regeneration: {user_feedback}',
-                alternatives_considered=['Full redesign', 'Accept as-is'],
-                chosen_alternative='Code regeneration',
-                impacted_components=['codegen'],
-                triggered_by='user_feedback'
+                parent_iteration=previous_result.iteration,
+                created_at=datetime.now(),
+                original_requirements=requirements,
+                outputs={
+                    'analysis': previous_result.analysis,  # REUTILIZAR análisis
+                    'code_generation': {
+                        'iteration': new_iteration,
+                        'timestamp': datetime.now().isoformat(),
+                        'has_previous_code': True,
+                        'user_instructions': user_instructions,
+                        'regeneration': True
+                    },
+                    'validation': {
+                        'iteration': new_iteration,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                },
+                user_feedback=user_instructions,
+                execution_metrics={}
             )
             
-            # FASE 2: Regenerar código
-            print("💻 FASE 2: Regeneración de Código")
+            # FASE 2: Generación de código (SKIP analyzer)
+            print("💻 FASE 2: Generación de Código (con feedback)")
             print("-" * 80)
+            print(f"🤖 Modelo: {self.codegen.model_name}")
+            print("⏳ Regenerando código con instrucciones del usuario...")
             phase_start = time.time()
             
-            codegen_result = self.codegen.generate(
-                analysis_result=analysis_result,
-                project_name=self.project_name,
-                current_iteration=new_iteration,
-                user_instructions=f"FEEDBACK FROM PREVIOUS ITERATION: {user_feedback}"
-            )
+            state = self.codegen.run(state)
             
             phase_durations['codegen'] = time.time() - phase_start
-            print(f"✅ Regeneración completada en {phase_durations['codegen']:.2f}s")
+            print(f"✅ Generación completada en {phase_durations['codegen']:.2f}s")
             print()
             
             # FASE 3: Validación
             print("🔍 FASE 3: Validación")
             print("-" * 80)
+            print(f"🤖 Modelo: {self.validator.model_name}")
+            print("⏳ Validando código regenerado...")
             phase_start = time.time()
             
-            validation_result = self.validator.validate(
-                codegen_result=codegen_result,
-                analysis_result=analysis_result,
-                project_name=self.project_name,
-                current_iteration=new_iteration
-            )
+            state = self.validator.run(state)
             
             phase_durations['validator'] = time.time() - phase_start
             print(f"✅ Validación completada en {phase_durations['validator']:.2f}s")
@@ -379,37 +430,35 @@ class IterativeOrchestrator:
             
             # Construir resultado
             iteration_duration = time.time() - iteration_start
-            phase_durations['analyzer'] = 0.0  # No se ejecutó
             
             result = IterationResult(
                 iteration=new_iteration,
                 project_name=self.project_name,
-                analysis=analysis_result,
-                codegen=codegen_result,
-                validation=validation_result,
+                analysis=state.outputs.get('analysis', {}),
+                codegen=state.outputs.get('code_generation', {}),
+                validation=state.outputs.get('validation', {}),
                 timestamp=datetime.now(),
                 duration_seconds=iteration_duration,
                 phase_durations=phase_durations
             )
             
-            # Guardar iteración
-            self._save_iteration_results(
-                result,
-                requirements=previous_result.analysis.get('requirements', 'N/A'),
-                user_feedback=user_feedback
-            )
+            # Guardar
+            self._save_iteration_results(result, requirements, user_instructions)
             
-            # Actualizar estado
+            # Actualizar estado interno
             self.current_iteration = new_iteration
             self.last_result = result
             
+            # Mostrar resumen
             self._print_iteration_summary(result)
             
             return result
             
         except Exception as e:
             print()
-            print(f"❌ ERROR EN REGENERACIÓN: {e}")
+            print("=" * 80)
+            print(f"❌ ERROR AL REGENERAR CÓDIGO: {e}")
+            print("=" * 80)
             import traceback
             traceback.print_exc()
             raise
@@ -420,7 +469,6 @@ class IterativeOrchestrator:
         user_instructions: str
     ) -> IterationResult:
         """
-        Rediseña la arquitectura completamente.
         Ejecuta una nueva iteración desde el análisis.
         
         Flujo:
@@ -499,6 +547,56 @@ class IterativeOrchestrator:
         
         print("La iteración ha sido aceptada. Puedes continuar con la siguiente.")
         print()
+    
+    def _get_context_summary(self, parent_iteration: Optional[int]) -> str:
+        """Obtiene resumen de contexto de iteración previa"""
+        if parent_iteration is None:
+            return "First iteration - no previous context"
+        
+        try:
+            prev_iter = self.storage.load_iteration(self.project_name, parent_iteration)
+            if prev_iter and prev_iter.state.outputs.get('analysis'):
+                analysis = prev_iter.state.outputs['analysis']
+                if 'analysis' in analysis and analysis['analysis']:
+                    arch_pattern = analysis['analysis'].get('architectural_pattern', {}).get('pattern', 'N/A')
+                    return f"Previous iteration used {arch_pattern}"
+            return "Previous iteration data not available"
+        except:
+            return "Could not load previous iteration"
+    
+    def _get_previous_decisions(self, parent_iteration: Optional[int]) -> list:
+        """Obtiene decisiones de iteración previa"""
+        if parent_iteration is None:
+            return []
+        
+        try:
+            decisions = self.decision_logger.get_decisions(
+                iteration=parent_iteration
+            )
+            return [d.to_dict() for d in decisions[:5]]  # Top 5 decisions
+        except:
+            return []
+    
+    def _get_diff_summary(self, parent_iteration: Optional[int]) -> Optional[str]:
+        """Obtiene resumen de diferencias con iteración previa"""
+        if parent_iteration is None:
+            return None
+        
+        return f"Changes from iteration {parent_iteration}"
+    
+    def _get_code_context(self, parent_iteration: Optional[int]) -> str:
+        """Obtiene contexto de código de iteración previa"""
+        if parent_iteration is None:
+            return "First iteration - generating from scratch"
+        
+        return f"Building on code from iteration {parent_iteration}"
+    
+    def _get_trend_analysis(self, parent_iteration: Optional[int]) -> str:
+        """Obtiene análisis de tendencias"""
+        if parent_iteration is None:
+            return "First iteration - no historical data"
+        
+        return f"Comparing with iteration {parent_iteration}"
     
     def _save_iteration_results(
         self,
