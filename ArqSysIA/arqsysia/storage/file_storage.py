@@ -314,11 +314,22 @@ class FileStorage(StorageBackend):
             self.save_metadata(metadata)
     
     def _dict_to_iteration(self, data: Dict) -> Iteration:
-        """Convierte diccionario a objeto Iteration"""
+        """
+        Convierte diccionario a objeto Iteration.
+        
+        ✅ CORRECCIÓN: Convierte campos datetime de string a datetime objects
+        antes de crear ProjectState.
+        """
         from ..core.state import ProjectState
         
         # Reconstruir ProjectState
-        state_data = data["state"]
+        state_data = data["state"].copy()  # Hacer copia para no mutar original
+        
+        # ✅ CORRECCIÓN: Convertir created_at de string a datetime
+        if "created_at" in state_data and isinstance(state_data["created_at"], str):
+            state_data["created_at"] = datetime.fromisoformat(state_data["created_at"])
+        
+        # Crear ProjectState con datos convertidos
         state = ProjectState(**state_data)
         
         # Reconstruir Decisions

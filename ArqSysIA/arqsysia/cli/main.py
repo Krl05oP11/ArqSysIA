@@ -99,56 +99,41 @@ class ArqSysiaCLI:
     def _confirm_exit(self) -> bool:
         """Confirmar salida con el usuario."""
         try:
-            response = input("\n➤ Do you want to exit? (y/n): ").strip().lower()
+            response = input("\n➤ Are you sure you want to exit? (y/N): ").strip().lower()
             return response in ['y', 'yes']
         except (EOFError, KeyboardInterrupt):
             return True
     
+    def _confirm(self, message: str) -> bool:
+        """
+        Solicitar confirmación del usuario.
+        
+        Args:
+            message: Mensaje de confirmación
+            
+        Returns:
+            True si el usuario confirma, False en caso contrario
+        """
+        try:
+            response = input(f"\n➤ {message} (y/N): ").strip().lower()
+            return response in ['y', 'yes']
+        except (EOFError, KeyboardInterrupt):
+            return False
+    
     def print_welcome(self) -> None:
-        """Imprimir mensaje de bienvenida."""
+        """Mostrar mensaje de bienvenida con información del proyecto."""
         print("\n" + "╔" + "═" * 60 + "╗")
-        print("║" + " ArqSysIA v1.0 - Iterative Software Architecture ".center(60) + "║")
+        print("║" + "ArqSysIA v1.0 - Iterative Software Architecture".center(60) + "║")
         print("╚" + "═" * 60 + "╝")
-        print("\n🎯 Project:", self.project_name)
-        print("📁 Data directory:", self.data_dir)
-        print("\n💡 Tip: Press Ctrl+C at any time to return to the main menu")
+        print(f"🎯 Project: {self.project_name}")
+        print(f"📁 Data directory: {self.data_dir}")
+        print("💡 Tip: Press Ctrl+C at any time to return to the main menu")
     
     def show_main_menu(self) -> None:
-        """Mostrar menú principal con estado actual."""
-        # Obtener estado actual
-        try:
-            latest = self.orchestrator.version_manager.get_latest_iteration()
-            
-            print("\n" + "─" * 60)
-            print("📊 PROJECT STATUS")
-            print("─" * 60)
-            
-            if latest:
-                # ✅ CORRECTO: Usar iteration_number, created_at, y acceder correctamente al score
-                print(f"Current Iteration: {latest.iteration_number}")
-                score = latest.state.outputs.get('validation', {}).get('overall_score', 0)
-                print(f"Last Score: {score}/100")
-                print(f"Last Updated: {latest.created_at.strftime('%Y-%m-%d %H:%M')}")
-                
-                # Mostrar tendencia si hay más de una iteración
-                iterations = self.orchestrator.version_manager.list_iterations()
-                if len(iterations) > 1:
-                    prev = self.orchestrator.version_manager.get_iteration(latest.iteration_number - 1)
-                    prev_score = prev.state.outputs.get('validation', {}).get('overall_score', 0)
-                    delta = score - prev_score
-                    trend = "📈" if delta > 0 else "📉" if delta < 0 else "➡️"
-                    print(f"Trend: {trend} ({delta:+d} from previous)")
-            else:
-                print("Status: No iterations yet - Start your first iteration!")
-            
-        except Exception as e:
-            print(f"\n🔭 Status: New project (no iterations)")
-            # Solo mostrar error si no es un proyecto nuevo
-            if "not found" not in str(e).lower():
-                print(f"   Note: {e}")
-        
-        # Menú de comandos
+        """Mostrar menú principal con estado del proyecto."""
         print("\n" + "─" * 60)
+        self._show_project_status()
+        print("─" * 60)
         print("📋 COMMANDS")
         print("─" * 60)
         print("  1. New Iteration     - Start a new iteration")
@@ -160,40 +145,52 @@ class ArqSysiaCLI:
         print("  7. Exit             - Exit ArqSysIA")
         print("─" * 60)
     
+    def _show_project_status(self) -> None:
+        """Mostrar estado actual del proyecto."""
+        try:
+            iterations = self.orchestrator.version_manager.list_iterations()
+            latest = self.orchestrator.version_manager.get_latest_iteration()
+            
+            print("📊 PROJECT STATUS")
+            print("─" * 60)
+            
+            if not iterations:
+                print("Status: No iterations yet - Start your first iteration!")
+            else:
+                print(f"Total Iterations: {len(iterations)}")
+                if latest:
+                    print(f"Latest Iteration: #{latest.iteration_number}")
+                    # Mostrar score si está disponible
+                    validation_output = latest.state.outputs.get('validation', {})
+                    validation_results = validation_output.get('validation_results', {})
+                    if validation_results:
+                        arch_score = validation_results.get('architecture', {}).get('architecture_score', 0)
+                        sec_score = validation_results.get('security', {}).get('security_score', 0)
+                        avg_score = int((arch_score + sec_score) / 2 * 10) if arch_score or sec_score else 0
+                        print(f"Latest Score: {avg_score}/100")
+        except Exception as e:
+            print(f"Status: Error reading project status ({e})")
+    
     def get_user_choice(self) -> str:
-        """Obtener elección del usuario con validación robusta."""
-        max_attempts = 3
-        attempts = 0
+        """
+        Obtener selección del usuario con validación.
         
-        while attempts < max_attempts:
-            try:
-                choice = input("\n➤ Enter command (1-7): ").strip()
-                
-                if not choice:
-                    print("⚠️  Please enter a command.")
-                    attempts += 1
-                    continue
-                
-                if choice in ['1', '2', '3', '4', '5', '6', '7']:
-                    return choice
-                else:
-                    print("❌ Invalid choice. Please enter a number between 1 and 7.")
-                    attempts += 1
-                    
-            except EOFError:
-                print("\n⚠️  EOF detected. Exiting...")
-                return '7'
-            except KeyboardInterrupt:
-                raise  # Propagar para manejar en run()
-        
-        print(f"\n⚠️  Maximum attempts ({max_attempts}) reached. Returning to menu.")
-        return ''  # Retornar vacío para volver a mostrar el menú
+        Returns:
+            Opción seleccionada como string
+        """
+        try:
+            choice = input("\n➤ Enter command (1-7): ").strip()
+            return choice
+        except (EOFError, KeyboardInterrupt):
+            raise
     
     def handle_choice(self, choice: str) -> None:
-        """Manejar elección del usuario con mejor logging de errores."""
-        if not choice:
-            return  # Ignorar opciones vacías
+        """
+        Manejar la elección del usuario con error handling mejorado.
         
+        Args:
+            choice: Opción seleccionada por el usuario
+        """
         handlers = {
             '1': self.new_iteration,
             '2': self.view_history,
@@ -250,75 +247,154 @@ class ArqSysiaCLI:
                 else:
                     continue
         
-        if line_count >= max_lines:
-            print(f"\n⚠️  Maximum lines ({max_lines}) reached.")
+        requirements = '\n'.join(lines).strip()
         
-        requirements = "\n".join(lines)
-        
-        if not requirements.strip():
+        # Validar que no esté vacío
+        if not requirements:
             print("\n❌ Requirements cannot be empty.")
             input("\nPress Enter to continue...")
             return
         
-        # Mostrar resumen de requirements
-        word_count = len(requirements.split())
-        print(f"\n📋 Requirements summary: {line_count} lines, {word_count} words")
+        # Confirmar antes de ejecutar
+        print(f"\n📊 Requirements summary:")
+        print(f"   Lines: {len(lines)}")
+        print(f"   Characters: {len(requirements)}")
         
-        if not self._confirm("Start iteration with these requirements?"):
-            print("❌ Iteration cancelled.")
+        if not self._confirm("Execute iteration with these requirements?"):
+            print("⚠️  Iteration cancelled.")
             input("\nPress Enter to continue...")
             return
         
-        # Calcular número de iteración
-        try:
-            latest = self.orchestrator.version_manager.get_latest_iteration()
-            # ✅ CORRECTO: Usar iteration_number en lugar de number
-            iteration_number = latest.iteration_number + 1 if latest else 1
-        except:
-            iteration_number = 1
-        
-        print(f"\n🚀 Starting iteration {iteration_number}...")
-        print("⏳ This may take a few minutes...")
-        print("💡 Tip: The LLM is analyzing and generating architecture...\n")
-        
         # Ejecutar iteración
+        print("\n" + "─" * 60)
+        print("🚀 EXECUTING ITERATION...")
+        print("─" * 60)
+        print("⏳ This may take several minutes. Please wait...")
+        print("💡 The LLMs are analyzing, generating code, and validating...\n")
+        
         try:
-            result = self.orchestrator.run_iteration(
+            result = self.orchestrator.execute_iteration(
                 requirements=requirements,
-                iteration_number=iteration_number
+                user_feedback=None
             )
             
             # Mostrar resultado
-            print("\n" + "═" * 60)
-            print("✅ ITERATION COMPLETED")
-            print("═" * 60)
+            print("\n" + "─" * 60)
+            print("✅ ITERATION COMPLETED!")
+            print("─" * 60)
             self.viewer.show_iteration_result(result)
             
-            # Menú post-validación
-            choice = self.orchestrator.post_validation_menu(result)
-            self.handle_post_validation(choice, result)
+            # Mostrar menú post-validación
+            self._show_post_validation_menu(result)
             
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Iteration interrupted by user.")
+            print("❌ Partial results may have been saved.")
         except Exception as e:
-            print(f"\n❌ Error during iteration: {e}")
+            print(f"\n\n❌ Error during iteration: {e}")
             print(f"   Error type: {type(e).__name__}")
-            print("\n💡 Tip: Check your Ollama service is running and the model is available")
-            input("\nPress Enter to continue...")
+            print("\n💡 Tips:")
+            print("   - Check that Ollama is running")
+            print("   - Verify that the required models are installed")
+            print("   - Try again with simpler requirements")
+        
+        input("\n\nPress Enter to continue...")
+    
+    def _show_post_validation_menu(self, result: IterationResult) -> None:
+        """
+        Mostrar menú de opciones después de validación.
+        
+        Args:
+            result: Resultado de la iteración
+        """
+        print("\n" + "─" * 60)
+        print("WHAT'S NEXT?")
+        print("─" * 60)
+        print("  1. Accept & Continue  - Proceed with this architecture")
+        print("  2. Regenerate Code    - Keep architecture, generate new code")
+        print("  3. Redesign           - Create completely new architecture")
+        print("  4. View Details       - See full validation report")
+        print("  5. Return to Menu     - Go back to main menu")
+        print("─" * 60)
+        
+        try:
+            choice = input("\n➤ Enter choice (1-5): ").strip()
+            
+            if choice == '1':
+                print("\n✅ Architecture accepted! Use 'Continue Last' to build on it.")
+            elif choice == '2':
+                self._regenerate_code(result)
+            elif choice == '3':
+                self._redesign_architecture(result)
+            elif choice == '4':
+                self.viewer.show_iteration_details(result.iteration)
+            elif choice == '5':
+                return
+            else:
+                print("\n❌ Invalid choice.")
+        except (EOFError, KeyboardInterrupt):
+            print("\n⚠️  Returning to main menu...")
+    
+    def _regenerate_code(self, result: IterationResult) -> None:
+        """Regenerar código manteniendo arquitectura."""
+        print("\n📝 Enter specific instructions for code regeneration:")
+        print("(type 'END' on a new line to finish)")
+        
+        lines = []
+        while True:
+            try:
+                line = input()
+                if line.strip().upper() == 'END':
+                    break
+                lines.append(line)
+            except (EOFError, KeyboardInterrupt):
+                break
+        
+        instructions = '\n'.join(lines).strip()
+        if not instructions:
+            print("❌ Instructions cannot be empty.")
+            return
+        
+        print("\n🔄 Regenerating code...")
+        # TODO: Implementar regeneración de código
+        print("⚠️  Code regeneration feature coming soon!")
+    
+    def _redesign_architecture(self, result: IterationResult) -> None:
+        """Rediseñar arquitectura desde cero."""
+        print("\n📝 Enter feedback for architectural redesign:")
+        print("(type 'END' on a new line to finish)")
+        
+        lines = []
+        while True:
+            try:
+                line = input()
+                if line.strip().upper() == 'END':
+                    break
+                lines.append(line)
+            except (EOFError, KeyboardInterrupt):
+                break
+        
+        feedback = '\n'.join(lines).strip()
+        if not feedback:
+            print("❌ Feedback cannot be empty.")
+            return
+        
+        print("\n🎨 Redesigning architecture...")
+        # TODO: Implementar rediseño
+        print("⚠️  Architecture redesign feature coming soon!")
     
     def view_history(self) -> None:
-        """Ver historial de iteraciones."""
+        """Ver historial de iteraciones con manejo de errores."""
         print("\n" + "═" * 60)
         print("ITERATION HISTORY")
         print("═" * 60)
         
         try:
             self.viewer.show_iteration_history()
-        except FileNotFoundError:
-            print("\n📭 No iterations found for this project yet.")
-            print("💡 Tip: Use 'New Iteration' (option 1) to create your first iteration")
         except Exception as e:
-            print(f"\n❌ Error viewing history: {e}")
+            print(f"❌ Error viewing history: {e}")
         
-        input("\n\nPress Enter to continue...")
+        input("\nPress Enter to continue...")
     
     def view_iteration(self) -> None:
         """Ver iteración específica con validación mejorada."""
@@ -326,11 +402,12 @@ class ArqSysiaCLI:
         print("VIEW ITERATION")
         print("═" * 60)
         
-        # Mostrar iteraciones disponibles
+        # ✅ CORRECCIÓN: Mostrar solo números de iteración disponibles
         try:
             iterations = self.orchestrator.version_manager.list_iterations()
             if iterations:
-                print(f"\n📋 Available iterations: {', '.join(map(str, iterations))}")
+                iter_numbers = [str(i.iteration_number) for i in iterations]
+                print(f"\n📋 Available iterations: {', '.join(iter_numbers)}")
         except:
             pass
         
@@ -365,11 +442,12 @@ class ArqSysiaCLI:
         print("COMPARE ITERATIONS")
         print("═" * 60)
         
-        # Mostrar iteraciones disponibles
+        # ✅ CORRECCIÓN: Mostrar solo números de iteración disponibles
         try:
             iterations = self.orchestrator.version_manager.list_iterations()
             if iterations:
-                print(f"\n📋 Available iterations: {', '.join(map(str, iterations))}")
+                iter_numbers = [str(i.iteration_number) for i in iterations]
+                print(f"\n📋 Available iterations: {', '.join(iter_numbers)}")
             else:
                 print("\n📭 No iterations available to compare.")
                 input("\nPress Enter to continue...")
@@ -428,271 +506,117 @@ class ArqSysiaCLI:
                 input("\nPress Enter to continue...")
                 return
             
-            # ✅ CORRECTO: Usar iteration_number, created_at, y acceder correctamente al score
-            print(f"\n📌 Last iteration: {latest.iteration_number}")
-            score = latest.state.outputs.get('validation', {}).get('overall_score', 0)
-            print(f"📊 Score: {score}/100")
-            print(f"📅 Date: {latest.created_at.strftime('%Y-%m-%d %H:%M')}")
+            print(f"\n📋 Latest iteration: #{latest.iteration_number}")
+            print(f"   Created: {latest.created_at.strftime('%Y-%m-%d %H:%M')}")
             
-            print("\n💡 This will create a new iteration based on the previous one.")
-            confirm = input("\n➤ Continue with new requirements? (y/n): ").strip().lower()
+            # Mostrar resumen de la última iteración
+            validation_output = latest.state.outputs.get('validation', {})
+            validation_results = validation_output.get('validation_results', {})
+            if validation_results:
+                arch_score = validation_results.get('architecture', {}).get('architecture_score', 0)
+                sec_score = validation_results.get('security', {}).get('security_score', 0)
+                print(f"   Architecture Score: {arch_score}/10")
+                print(f"   Security Score: {sec_score}/10")
             
-            if confirm in ['y', 'yes']:
-                self.new_iteration()
-            else:
-                print("❌ Cancelled.")
-                
+            if not self._confirm("Continue from this iteration?"):
+                print("⚠️  Operation cancelled.")
+                input("\nPress Enter to continue...")
+                return
+            
+            # Solicitar feedback/cambios
+            print("\n📝 Enter feedback or changes (type 'END' on a new line to finish):")
+            print("💡 Leave empty to regenerate with same requirements")
+            print("─" * 60)
+            
+            lines = []
+            while True:
+                try:
+                    line = input()
+                    if line.strip().upper() == 'END':
+                        break
+                    lines.append(line)
+                except (EOFError, KeyboardInterrupt):
+                    break
+            
+            feedback = '\n'.join(lines).strip()
+            
+            # Ejecutar nueva iteración basada en la anterior
+            print("\n" + "─" * 60)
+            print("🚀 EXECUTING CONTINUATION...")
+            print("─" * 60)
+            print("⏳ This may take several minutes. Please wait...\n")
+            
+            result = self.orchestrator.execute_iteration(
+                requirements=latest.state.original_requirements,
+                user_feedback=feedback if feedback else None
+            )
+            
+            print("\n" + "─" * 60)
+            print("✅ CONTINUATION COMPLETED!")
+            print("─" * 60)
+            self.viewer.show_iteration_result(result)
+            
+            # Mostrar menú post-validación
+            self._show_post_validation_menu(result)
+            
         except Exception as e:
             print(f"\n❌ Error: {e}")
         
-        input("\nPress Enter to continue...")
+        input("\n\nPress Enter to continue...")
     
     def settings(self) -> None:
-        """Mostrar/modificar configuración."""
+        """Configurar opciones del proyecto."""
         print("\n" + "═" * 60)
         print("SETTINGS")
         print("═" * 60)
-        
-        print("\n📋 Current Settings:")
-        print(f"  Project Name: {self.project_name}")
-        print(f"  Data Directory: {self.data_dir}")
-        print(f"  Storage Backend: FileStorage")
-        
-        # Mostrar información del sistema
-        try:
-            iterations = self.orchestrator.version_manager.list_iterations()
-            print(f"\n📊 Project Statistics:")
-            print(f"  Total Iterations: {len(iterations)}")
-            
-            if iterations:
-                latest = self.orchestrator.version_manager.get_latest_iteration()
-                print(f"  Latest Iteration: {latest.iteration_number}")
-                print(f"  Project Size: {self._get_project_size()} MB")
-        except:
-            pass
-        
-        print("\n💡 Settings management coming soon...")
-        print("   - Change data directory")
-        print("   - Configure LLM settings")
-        print("   - Export/import project")
-        print("   - Backup/restore")
+        print("\n⚠️  Settings feature coming soon!")
+        print("\nPlanned features:")
+        print("  • Configure LLM models")
+        print("  • Adjust iteration parameters")
+        print("  • Set project preferences")
+        print("  • Export/Import settings")
         
         input("\nPress Enter to continue...")
     
-    def _get_project_size(self) -> float:
-        """Calcular tamaño del proyecto en MB."""
-        try:
-            project_path = Path(self.data_dir) / self.project_name
-            total_size = sum(f.stat().st_size for f in project_path.rglob('*') if f.is_file())
-            return round(total_size / (1024 * 1024), 2)
-        except:
-            return 0.0
-    
     def exit_cli(self) -> None:
-        """Salir del CLI con mensaje de confirmación."""
-        print("\n" + "═" * 60)
+        """Salir del CLI de forma limpia."""
+        print("\n" + "─" * 60)
         print("👋 Thank you for using ArqSysIA!")
-        print("═" * 60)
-        print("\n💾 All iterations have been saved.")
-        print(f"📁 Data location: {self.data_dir}/{self.project_name}")
-        
-        # Mostrar estadísticas finales
-        try:
-            iterations = self.orchestrator.version_manager.list_iterations()
-            if iterations:
-                print(f"\n📊 Session Summary:")
-                print(f"  Total Iterations: {len(iterations)}")
-                latest = self.orchestrator.version_manager.get_latest_iteration()
-                score = latest.state.outputs.get('validation', {}).get('overall_score', 0)
-                print(f"  Latest Score: {score}/100")
-        except:
-            pass
-        
-        print("\n✨ See you next time!\n")
+        print("─" * 60)
+        print(f"📁 Project data saved in: {self.data_dir}")
+        print("💡 Run 'arqsysia {self.project_name}' to continue later\n")
         self.running = False
-    
-    def _confirm(self, message: str) -> bool:
-        """
-        Helper para confirmaciones de usuario.
-        
-        Args:
-            message: Mensaje de confirmación
-            
-        Returns:
-            True si el usuario confirma, False en caso contrario
-        """
-        try:
-            response = input(f"\n➤ {message} (y/n): ").strip().lower()
-            return response in ['y', 'yes']
-        except (EOFError, KeyboardInterrupt):
-            return False
-    
-    def handle_post_validation(self, choice: str, result: IterationResult) -> None:
-        """
-        Manejar opciones post-validación con mejor manejo de errores.
-        
-        Args:
-            choice: Opción seleccionada ('accept', 'regenerate', 'redesign', 'details', 'exit')
-            result: Resultado de la iteración
-        """
-        if choice == 'accept':
-            try:
-                # ✅ CORRECTO: Usar result.iteration en lugar de result.iteration_number
-                self.orchestrator.accept_and_continue(result.iteration)
-                print("\n✅ Iteration accepted!")
-                print("💡 You can now create a new iteration or view the history")
-                input("\nPress Enter to continue...")
-            except Exception as e:
-                print(f"\n❌ Error accepting iteration: {e}")
-                input("\nPress Enter to continue...")
-        
-        elif choice == 'regenerate':
-            print("\n" + "─" * 60)
-            print("REGENERATE CODE")
-            print("─" * 60)
-            print("\n💡 Provide specific feedback about what needs to be changed in the code")
-            feedback = input("\n➤ Enter feedback for code regeneration: ").strip()
-            
-            if not feedback:
-                print("❌ Feedback cannot be empty.")
-                input("\nPress Enter to continue...")
-                return
-            
-            if not self._confirm("Regenerate code with this feedback?"):
-                print("❌ Cancelled.")
-                input("\nPress Enter to continue...")
-                return
-            
-            try:
-                print("\n🔄 Regenerating code...")
-                print("⏳ This may take a few minutes...")
-                # ✅ CORRECTO: Usar result.iteration en lugar de result.iteration_number
-                new_result = self.orchestrator.regenerate_code(
-                    result.iteration,
-                    feedback
-                )
-                
-                print("\n✅ Code regenerated successfully!")
-                self.viewer.show_iteration_result(new_result)
-                
-                # Mostrar menú nuevamente
-                choice = self.orchestrator.post_validation_menu(new_result)
-                self.handle_post_validation(choice, new_result)
-                
-            except Exception as e:
-                print(f"\n❌ Error regenerating code: {e}")
-                print(f"   Error type: {type(e).__name__}")
-                input("\nPress Enter to continue...")
-        
-        elif choice == 'redesign':
-            print("\n" + "─" * 60)
-            print("REDESIGN ARCHITECTURE")
-            print("─" * 60)
-            print("\n💡 Provide feedback about architectural changes needed")
-            feedback = input("\n➤ Enter feedback for architecture redesign: ").strip()
-            
-            if not feedback:
-                print("❌ Feedback cannot be empty.")
-                input("\nPress Enter to continue...")
-                return
-            
-            if not self._confirm("Redesign architecture with this feedback?"):
-                print("❌ Cancelled.")
-                input("\nPress Enter to continue...")
-                return
-            
-            try:
-                print("\n🔄 Redesigning architecture...")
-                print("⏳ This may take a few minutes...")
-                # ✅ CORRECTO: Usar result.iteration en lugar de result.iteration_number
-                new_result = self.orchestrator.redesign_architecture(
-                    result.iteration,
-                    feedback
-                )
-                
-                print("\n✅ Architecture redesigned successfully!")
-                self.viewer.show_iteration_result(new_result)
-                
-                # Mostrar menú nuevamente
-                choice = self.orchestrator.post_validation_menu(new_result)
-                self.handle_post_validation(choice, new_result)
-                
-            except Exception as e:
-                print(f"\n❌ Error redesigning architecture: {e}")
-                print(f"   Error type: {type(e).__name__}")
-                input("\nPress Enter to continue...")
-        
-        elif choice == 'details':
-            try:
-                # ✅ CORRECTO: Usar result.iteration en lugar of result.iteration_number
-                self.viewer.show_iteration_details(result.iteration)
-                input("\nPress Enter to continue...")
-            except Exception as e:
-                print(f"\n❌ Error viewing details: {e}")
-                input("\nPress Enter to continue...")
-        
-        elif choice == 'exit':
-            print("\n💾 Saving and returning to main menu...")
-            input("\nPress Enter to continue...")
 
 
 def main():
     """
-    Punto de entrada del CLI - Versión Optimizada.
+    Punto de entrada principal del CLI.
     
-    Usage:
-        python -m arqsysia.cli.main MyProject
-        python -m arqsysia.cli.main MyProject --data-dir ./custom_data
+    Uso:
+        arqsysia <project_name> [data_dir]
     """
-    import argparse
+    if len(sys.argv) < 2:
+        print("❌ Error: Project name required")
+        print("\nUsage: arqsysia <project_name> [data_dir]")
+        print("\nExample:")
+        print("  arqsysia MyProject")
+        print("  arqsysia MyProject ./data")
+        sys.exit(1)
     
-    parser = argparse.ArgumentParser(
-        description="ArqSysIA v1.0 - Iterative Software Architecture",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s MyProject
-  %(prog)s MyProject --data-dir ./my_projects
-  %(prog)s ecommerce --data-dir ~/arqsysia_data
-  
-For more information, visit: https://github.com/yourusername/ArqSysIA
-        """
-    )
-    
-    parser.add_argument(
-        "project",
-        help="Project name (alphanumeric and underscores only)"
-    )
-    
-    parser.add_argument(
-        "--data-dir",
-        default="./projects",
-        help="Data directory (default: ./projects)"
-    )
-    
-    parser.add_argument(
-        "--version",
-        action="version",
-        version="ArqSysIA v1.0.0"
-    )
-    
-    args = parser.parse_args()
+    project_name = sys.argv[1]
+    data_dir = sys.argv[2] if len(sys.argv) > 2 else "./projects"
     
     try:
-        cli = ArqSysiaCLI(args.project, args.data_dir)
+        cli = ArqSysiaCLI(project_name, data_dir)
         cli.run()
-    except KeyboardInterrupt:
-        print("\n\n⚠️  Interrupted by user. Exiting gracefully...")
-        sys.exit(0)
     except ValueError as e:
-        print(f"\n❌ Configuration error: {e}")
+        print(f"❌ Invalid project configuration: {e}")
         sys.exit(1)
-    except RuntimeError as e:
-        print(f"\n❌ Initialization error: {e}")
-        print("\n💡 Tip: Check that Ollama is running and the required model is available")
-        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n\n👋 Goodbye!")
+        sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Fatal error: {e}")
+        print(f"❌ Fatal error: {e}")
         print(f"   Error type: {type(e).__name__}")
         sys.exit(1)
 
