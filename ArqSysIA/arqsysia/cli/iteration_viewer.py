@@ -196,11 +196,15 @@ class IterationViewer:
         else:
             print("  No architecture details available")
         
-        # ✅ CORRECCIÓN: Componentes - acceder a main_components desde estructura anidada
+        # ✅ BUG FIX #2: Validar que analysis_data no sea None antes de usar .get()
         print(f"\n📦 COMPONENTS")
         print("─" * 70)
         
-        components = analysis_data.get('main_components', [])
+        # Validación agregada para evitar crash con iteraciones fallidas
+        if analysis_data:
+            components = analysis_data.get('main_components', [])
+        else:
+            components = []
         
         if components:
             print(f"Total: {len(components)}\n")
@@ -212,54 +216,60 @@ class IterationViewer:
                     
                     print(f"  {i}. {comp_name}")
                     if comp_desc:
-                        print(f"     {comp_desc}")
+                        # Truncar descripción larga
+                        if len(comp_desc) > 100:
+                            print(f"     {comp_desc[:100]}...")
+                        else:
+                            print(f"     {comp_desc}")
+                    
                     if responsibilities:
                         print(f"     Responsibilities:")
-                        for resp in responsibilities[:3]:  # Mostrar máximo 3
+                        for resp in responsibilities[:3]:
                             print(f"       - {resp}")
                         if len(responsibilities) > 3:
                             print(f"       ... and {len(responsibilities) - 3} more")
-                else:
-                    print(f"  {i}. {comp}")
-                print()
+                    print()
         else:
-            print("  No components defined")
+            print("  No components available")
+        
+        # Código generado
+        print(f"\n💻 CODE GENERATION")
+        print("─" * 70)
+        
+        code_output = iteration.state.outputs.get('code_generation', {})
+        if code_output:
+            files_generated = code_output.get('files_generated', [])
+            print(f"Files Generated: {len(files_generated)}")
+            
+            if files_generated:
+                print("\nKey Files:")
+                for file_path in files_generated[:5]:
+                    print(f"  • {file_path}")
+                if len(files_generated) > 5:
+                    print(f"  ... and {len(files_generated) - 5} more files")
+        else:
+            print("  No code generation details available")
         
         # Validación detallada
         self._show_validation_details(iteration)
-        
-        # Decisiones (si existen)
-        if iteration.decisions:
-            print(f"\n💭 DECISIONS ({len(iteration.decisions)})")
-            print("─" * 70)
-            for i, decision in enumerate(iteration.decisions[:5], 1):  # Mostrar máximo 5
-                print(f"  {i}. [{decision.phase}] {decision.decision_type}")
-                print(f"     {decision.description}")
-            
-            if len(iteration.decisions) > 5:
-                print(f"     ... and {len(iteration.decisions) - 5} more decisions")
     
     def show_iteration_result(self, result: IterationResult) -> None:
         """
-        Mostrar resultado de iteración recién creada (resumen breve).
+        Mostrar resultado de iteración recién completada.
         
         Args:
             result: Resultado de la iteración
         """
-        print("\n┌" + "─" * 68 + "┐")
-        # Usar result.iteration
-        print("│" + f" Iteration {result.iteration} - Summary ".center(68) + "│")
-        print("└" + "─" * 68 + "┘")
+        print("\n╔" + "═" * 70 + "╗")
+        print("║" + " Iteration Result ".center(70) + "║")
+        print("╚" + "═" * 70 + "╝\n")
         
         # Score
-        score = result.validation.get('overall_score', 0)
-        score_bar = self._create_score_bar(score)
-        
-        print(f"\n📊 Validation Score: {score}/100")
-        print(f"   {score_bar}")
+        print(f"📊 Final Score: {result.final_score}/100")
+        print(self._create_score_bar(result.final_score))
         
         # Issues
-        issues = result.validation.get('issues', [])
+        issues = result.validation_issues
         if issues:
             print(f"\n⚠️  Issues Found: {len(issues)}")
             for i, issue in enumerate(issues[:3], 1):
@@ -472,4 +482,4 @@ class IterationViewer:
         
         bar = bar_char * filled + "·" * empty
         return f"[{bar}]"
-                
+        

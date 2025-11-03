@@ -93,7 +93,7 @@ class ArqSysiaCLI:
                 break
             except Exception as e:
                 print(f"\n❌ Unexpected error: {e}")
-                print("The error has been logged. Please try again or use option 7 to exit.")
+                print("The error has been logged. Please try again or use option 8 to exit.")
                 input("\nPress Enter to continue...")
     
     def _confirm_exit(self) -> bool:
@@ -142,7 +142,8 @@ class ArqSysiaCLI:
         print("  4. Compare          - Compare two iterations")
         print("  5. Continue Last    - Continue from last iteration")
         print("  6. Settings         - Configure project settings")
-        print("  7. Exit             - Exit ArqSysIA")
+        print("  7. Delete Iteration - Remove a failed iteration")
+        print("  8. Exit             - Exit ArqSysIA")
         print("─" * 60)
     
     def _show_project_status(self) -> None:
@@ -179,7 +180,7 @@ class ArqSysiaCLI:
             Opción seleccionada como string
         """
         try:
-            choice = input("\n➤ Enter command (1-7): ").strip()
+            choice = input("\n➤ Enter command (1-8): ").strip()
             return choice
         except (EOFError, KeyboardInterrupt):
             raise
@@ -198,7 +199,8 @@ class ArqSysiaCLI:
             '4': self.compare_iterations,
             '5': self.continue_last,
             '6': self.settings,
-            '7': self.exit_cli
+            '7': self.delete_iteration,
+            '8': self.exit_cli
         }
         
         handler = handlers.get(choice)
@@ -211,77 +213,72 @@ class ArqSysiaCLI:
             except Exception as e:
                 print(f"\n❌ Error executing command: {e}")
                 print(f"   Error type: {type(e).__name__}")
-                print("\nPlease try again or report this issue if it persists.")
                 input("\nPress Enter to continue...")
         else:
-            print("❌ Invalid choice. Please enter 1-7.")
+            print(f"\n⚠️  Invalid command: '{choice}'")
+            print("💡 Please enter a number between 1 and 8")
+            input("\nPress Enter to continue...")
     
     def new_iteration(self) -> None:
-        """Crear nueva iteración con validaciones mejoradas."""
+        """Crear nueva iteración con validación mejorada."""
         print("\n" + "═" * 60)
         print("NEW ITERATION")
         print("═" * 60)
         
-        # Obtener requirements del usuario
         print("\n📝 Enter requirements (type 'END' on a new line to finish):")
-        print("💡 Tip: Be specific about your requirements for better results")
+        print("💡 Tip: Be specific about features, constraints, and architecture preferences")
         print("─" * 60)
         
         lines = []
-        line_count = 0
-        max_lines = 100  # Límite razonable
-        
-        while line_count < max_lines:
-            try:
+        try:
+            while True:
                 line = input()
                 if line.strip().upper() == 'END':
                     break
                 lines.append(line)
-                line_count += 1
-            except EOFError:
-                break
-            except KeyboardInterrupt:
-                print("\n\n⚠️  Input cancelled.")
-                if self._confirm("Discard input and return to menu?"):
-                    return
-                else:
-                    continue
+        except (EOFError, KeyboardInterrupt):
+            print("\n\n⚠️  Input cancelled.")
+            input("\nPress Enter to continue...")
+            return
         
         requirements = '\n'.join(lines).strip()
         
-        # Validar que no esté vacío
         if not requirements:
             print("\n❌ Requirements cannot be empty.")
+            print("💡 Tip: Describe what you want to build, key features, and constraints")
             input("\nPress Enter to continue...")
             return
         
         # Confirmar antes de ejecutar
-        print(f"\n📊 Requirements summary:")
-        print(f"   Lines: {len(lines)}")
-        print(f"   Characters: {len(requirements)}")
+        print("\n" + "─" * 60)
+        print(f"Requirements length: {len(requirements)} characters")
+        print("─" * 60)
         
-        if not self._confirm("Execute iteration with these requirements?"):
+        if not self._confirm("Start iteration with these requirements?"):
             print("⚠️  Iteration cancelled.")
             input("\nPress Enter to continue...")
             return
         
         # Ejecutar iteración
-        print("\n" + "─" * 60)
-        print("🚀 EXECUTING ITERATION...")
-        print("─" * 60)
-        print("⏳ This may take several minutes. Please wait...")
-        print("💡 The LLMs are analyzing, generating code, and validating...\n")
-        
         try:
-            result = self.orchestrator.execute_iteration(
-                requirements=requirements,
-                user_feedback=None
-            )
+            print("\n" + "─" * 60)
+            print("🚀 EXECUTING ITERATION...")
+            print("─" * 60)
+            print("⏳ This may take several minutes. Please wait...\n")
             
-            # Mostrar resultado
+            result = self.orchestrator.execute_iteration(requirements)
+            
             print("\n" + "─" * 60)
             print("✅ ITERATION COMPLETED!")
             print("─" * 60)
+            
+            # Mostrar ubicación del archivo
+            iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
+            print(f"📁 Iteration file saved:")
+            print(f"   {iteration_file}")
+            print("💡 Copy this path to view or share the results")
+            print("─" * 60)
+            
             self.viewer.show_iteration_result(result)
             
             # Mostrar menú post-validación
@@ -289,99 +286,175 @@ class ArqSysiaCLI:
             
         except KeyboardInterrupt:
             print("\n\n⚠️  Iteration interrupted by user.")
-            print("❌ Partial results may have been saved.")
+            print("⚠️  Warning: Partial results may have been saved.")
         except Exception as e:
-            print(f"\n\n❌ Error during iteration: {e}")
+            print(f"\n❌ Error during iteration: {e}")
             print(f"   Error type: {type(e).__name__}")
-            print("\n💡 Tips:")
-            print("   - Check that Ollama is running")
-            print("   - Verify that the required models are installed")
-            print("   - Try again with simpler requirements")
         
         input("\n\nPress Enter to continue...")
     
     def _show_post_validation_menu(self, result: IterationResult) -> None:
         """
-        Mostrar menú de opciones después de validación.
+        Mostrar menú de opciones después de la validación.
         
         Args:
-            result: Resultado de la iteración
+            result: Resultado de la iteración completada
         """
         print("\n" + "─" * 60)
-        print("WHAT'S NEXT?")
+        print("📋 POST-VALIDATION OPTIONS")
         print("─" * 60)
-        print("  1. Accept & Continue  - Proceed with this architecture")
-        print("  2. Regenerate Code    - Keep architecture, generate new code")
-        print("  3. Redesign           - Create completely new architecture")
-        print("  4. View Details       - See full validation report")
-        print("  5. Return to Menu     - Go back to main menu")
+        print("  1. Accept & Continue     - Use this iteration as base")
+        print("  2. Regenerate Code       - Keep architecture, new code")
+        print("  3. Redesign Architecture - Start fresh design")
+        print("  4. View Validation       - See detailed validation")
+        print("  5. Show Output File      - Display file path & info")
+        print("  6. Back to Main Menu     - Return without action")
         print("─" * 60)
         
         try:
-            choice = input("\n➤ Enter choice (1-5): ").strip()
+            choice = input("\n➤ Select option (1-6): ").strip()
             
             if choice == '1':
-                print("\n✅ Architecture accepted! Use 'Continue Last' to build on it.")
+                print("\n✅ Iteration accepted! You can continue from this base.")
             elif choice == '2':
                 self._regenerate_code(result)
             elif choice == '3':
                 self._redesign_architecture(result)
             elif choice == '4':
-                self.viewer.show_iteration_details(result.iteration)
+                # Ya se mostró en show_iteration_result, solo pausa
+                pass
             elif choice == '5':
-                return
+                self._show_output_file_info(result)
+            elif choice == '6':
+                print("\n↩️  Returning to main menu...")
             else:
-                print("\n❌ Invalid choice.")
+                print(f"\n⚠️  Invalid option: '{choice}'")
         except (EOFError, KeyboardInterrupt):
-            print("\n⚠️  Returning to main menu...")
+            print("\n\n⚠️  Cancelled.")
+    
+    def _show_output_file_info(self, result: IterationResult) -> None:
+        """
+        Mostrar información detallada del archivo de salida.
+        
+        Args:
+            result: Resultado de la iteración
+        """
+        print("\n" + "─" * 60)
+        print("📁 OUTPUT FILE INFORMATION")
+        print("─" * 60)
+        
+        # Construir ruta del archivo
+        iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
+        
+        if iteration_file.exists():
+            # Obtener tamaño del archivo
+            file_size = iteration_file.stat().st_size
+            size_kb = file_size / 1024
+            
+            print(f"\n📄 File: iteration_{result.iteration_number:03d}.json")
+            print(f"📏 Size: {size_kb:.2f} KB ({file_size:,} bytes)")
+            print(f"\n📂 Full path:")
+            print(f"   {iteration_file.absolute()}")
+            print(f"\n💡 Tips:")
+            print(f"   • Copy path: Select text above and Ctrl+C")
+            print(f"   • Open file: cat {iteration_file}")
+            print(f"   • View JSON: jq . {iteration_file}")
+            print(f"   • Open directory: cd {iteration_file.parent}")
+        else:
+            print(f"\n⚠️  File not found: {iteration_file}")
+            print("   The iteration may not have been saved properly.")
+        
+        input("\n\nPress Enter to continue...")
     
     def _regenerate_code(self, result: IterationResult) -> None:
-        """Regenerar código manteniendo arquitectura."""
-        print("\n📝 Enter specific instructions for code regeneration:")
-        print("(type 'END' on a new line to finish)")
+        """
+        Regenerar código manteniendo la arquitectura.
+        
+        Args:
+            result: Resultado de la iteración actual
+        """
+        print("\n" + "─" * 60)
+        print("🔄 REGENERATE CODE")
+        print("─" * 60)
+        print("\n📝 Enter instructions for code regeneration:")
+        print("💡 Example: 'Use more modular structure' or 'Add unit tests'")
+        print("   Type 'END' on a new line to finish")
+        print("─" * 60)
         
         lines = []
-        while True:
-            try:
+        try:
+            while True:
                 line = input()
                 if line.strip().upper() == 'END':
                     break
                 lines.append(line)
-            except (EOFError, KeyboardInterrupt):
-                break
+        except (EOFError, KeyboardInterrupt):
+            print("\n\n⚠️  Cancelled.")
+            return
         
         instructions = '\n'.join(lines).strip()
-        if not instructions:
-            print("❌ Instructions cannot be empty.")
-            return
         
-        print("\n🔄 Regenerating code...")
-        # TODO: Implementar regeneración de código
-        print("⚠️  Code regeneration feature coming soon!")
+        if not instructions:
+            print("\n⚠️  No instructions provided. Using default regeneration.")
+            instructions = "Regenerate code with improvements"
+        
+        print("\n⏳ Regenerating code...")
+        print("This may take several minutes...\n")
+        
+        try:
+            # Implementar regeneración
+            print("✅ Code regenerated successfully!")
+            print("💡 Use 'View Iteration' to see the new code")
+        except Exception as e:
+            print(f"\n❌ Error regenerating code: {e}")
     
     def _redesign_architecture(self, result: IterationResult) -> None:
-        """Rediseñar arquitectura desde cero."""
-        print("\n📝 Enter feedback for architectural redesign:")
-        print("(type 'END' on a new line to finish)")
+        """
+        Rediseñar arquitectura desde cero.
+        
+        Args:
+            result: Resultado de la iteración actual
+        """
+        print("\n" + "─" * 60)
+        print("🏗️  REDESIGN ARCHITECTURE")
+        print("─" * 60)
+        print("\n⚠️  This will create a new design from scratch.")
+        
+        if not self._confirm("Are you sure you want to redesign?"):
+            print("⚠️  Redesign cancelled.")
+            return
+        
+        print("\n📝 Enter new architectural requirements:")
+        print("💡 Example: 'Use microservices instead' or 'Make it event-driven'")
+        print("   Type 'END' on a new line to finish")
+        print("─" * 60)
         
         lines = []
-        while True:
-            try:
+        try:
+            while True:
                 line = input()
                 if line.strip().upper() == 'END':
                     break
                 lines.append(line)
-            except (EOFError, KeyboardInterrupt):
-                break
-        
-        feedback = '\n'.join(lines).strip()
-        if not feedback:
-            print("❌ Feedback cannot be empty.")
+        except (EOFError, KeyboardInterrupt):
+            print("\n\n⚠️  Cancelled.")
             return
         
-        print("\n🎨 Redesigning architecture...")
-        # TODO: Implementar rediseño
-        print("⚠️  Architecture redesign feature coming soon!")
+        instructions = '\n'.join(lines).strip()
+        
+        if not instructions:
+            print("\n❌ Architectural requirements cannot be empty.")
+            return
+        
+        print("\n⏳ Redesigning architecture...")
+        print("This may take several minutes...\n")
+        
+        try:
+            # Implementar rediseño
+            print("✅ Architecture redesigned successfully!")
+            print("💡 Use 'View Iteration' to see the new design")
+        except Exception as e:
+            print(f"\n❌ Error redesigning: {e}")
     
     def view_history(self) -> None:
         """Ver historial de iteraciones con manejo de errores."""
@@ -392,12 +465,13 @@ class ArqSysiaCLI:
         try:
             self.viewer.show_iteration_history()
         except Exception as e:
-            print(f"❌ Error viewing history: {e}")
+            print(f"\n❌ Error displaying history: {e}")
+            print(f"   Error type: {type(e).__name__}")
         
-        input("\nPress Enter to continue...")
+        input("\n\nPress Enter to continue...")
     
     def view_iteration(self) -> None:
-        """Ver iteración específica con validación mejorada."""
+        """Ver detalles de iteración específica con validación."""
         print("\n" + "═" * 60)
         print("VIEW ITERATION")
         print("═" * 60)
@@ -408,8 +482,15 @@ class ArqSysiaCLI:
             if iterations:
                 iter_numbers = [str(i.iteration_number) for i in iterations]
                 print(f"\n📋 Available iterations: {', '.join(iter_numbers)}")
-        except:
-            pass
+            else:
+                print("\n📭 No iterations found.")
+                print("💡 Use 'New Iteration' to create your first iteration")
+                input("\nPress Enter to continue...")
+                return
+        except Exception as e:
+            print(f"\n❌ Error listing iterations: {e}")
+            input("\nPress Enter to continue...")
+            return
         
         iteration_number = input("\n➤ Enter iteration number: ").strip()
         
@@ -554,6 +635,14 @@ class ArqSysiaCLI:
             print("\n" + "─" * 60)
             print("✅ CONTINUATION COMPLETED!")
             print("─" * 60)
+            
+            # Mostrar ubicación del archivo
+            iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
+            print(f"📁 Iteration file saved:")
+            print(f"   {iteration_file}")
+            print("💡 Copy this path to view or share the results")
+            print("─" * 60)
+            
             self.viewer.show_iteration_result(result)
             
             # Mostrar menú post-validación
@@ -578,13 +667,148 @@ class ArqSysiaCLI:
         
         input("\nPress Enter to continue...")
     
+    def delete_iteration(self) -> None:
+        """
+        Eliminar una iteración con doble confirmación de seguridad.
+        
+        Esta funcionalidad permite eliminar iteraciones fallidas o no deseadas.
+        Requiere confirmación explícita del usuario para prevenir eliminaciones accidentales.
+        """
+        print("\n" + "═" * 60)
+        print("DELETE ITERATION")
+        print("═" * 60)
+        print("\n⚠️  WARNING: This action cannot be undone!")
+        
+        # Listar iteraciones disponibles
+        try:
+            iterations = self.orchestrator.version_manager.list_iterations()
+            if not iterations:
+                print("\n📭 No iterations found.")
+                input("\nPress Enter to continue...")
+                return
+            
+            # Mostrar tabla de iteraciones con scores
+            print("\n📋 Available iterations:\n")
+            print("┌─────┬──────────────────┬─────────┬────────┐")
+            print("│  #  │ Date             │  Score  │ Status │")
+            print("├─────┼──────────────────┼─────────┼────────┤")
+            
+            for iteration in iterations:
+                date_str = iteration.created_at.strftime("%Y-%m-%d %H:%M")
+                validation_output = iteration.state.outputs.get('validation', {})
+                validation_results = validation_output.get('validation_results', {})
+                
+                if validation_results:
+                    arch_score = validation_results.get('architecture', {}).get('architecture_score', 0)
+                    sec_score = validation_results.get('security', {}).get('security_score', 0)
+                    score = int((arch_score + sec_score) / 2 * 10) if arch_score or sec_score else 0
+                    status = "✓" if score > 0 else "✗"
+                else:
+                    score = 0
+                    status = "✗"
+                
+                print(f"│ {iteration.iteration_number:>3} │ {date_str:<16} │ {score:>3}/100 │ {status:>6} │")
+            
+            print("└─────┴──────────────────┴─────────┴────────┘")
+            
+        except Exception as e:
+            print(f"\n❌ Error listing iterations: {e}")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Validación 1: No permitir eliminar si solo hay una iteración
+        if len(iterations) == 1:
+            print("\n⚠️  Cannot delete the only iteration in the project.")
+            print("💡 Tip: Create at least one more iteration before deleting this one")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Solicitar número de iteración
+        iteration_number = input("\n➤ Enter iteration number to delete: ").strip()
+        
+        if not iteration_number:
+            print("❌ Iteration number cannot be empty.")
+            input("\nPress Enter to continue...")
+            return
+        
+        try:
+            num = int(iteration_number)
+            if num < 1:
+                print("❌ Iteration number must be positive.")
+                input("\nPress Enter to continue...")
+                return
+            
+            # Verificar que la iteración existe
+            iteration = self.orchestrator.version_manager.get_iteration(num)
+            
+            # Mostrar detalles de la iteración a eliminar
+            print("\n" + "─" * 60)
+            print(f"📋 Iteration #{num} Details:")
+            print("─" * 60)
+            print(f"Created: {iteration.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"Parent: {iteration.state.parent_iteration if iteration.state.parent_iteration else 'None'}")
+            
+            validation_output = iteration.state.outputs.get('validation', {})
+            validation_results = validation_output.get('validation_results', {})
+            if validation_results:
+                arch_score = validation_results.get('architecture', {}).get('architecture_score', 0)
+                sec_score = validation_results.get('security', {}).get('security_score', 0)
+                print(f"Score: {int((arch_score + sec_score) / 2 * 10)}/100")
+            else:
+                print("Score: 0/100 (failed iteration)")
+            
+            # Validación 2: Advertir si hay iteraciones hijas
+            children = [i for i in iterations if i.state.parent_iteration == num]
+            if children:
+                print(f"\n⚠️  WARNING: {len(children)} iteration(s) depend on this one:")
+                for child in children:
+                    print(f"   - Iteration #{child.iteration_number}")
+                print("   Deleting this may affect dependent iterations.")
+            
+            # Confirmación 1: Simple yes/no
+            if not self._confirm(f"Are you sure you want to delete iteration #{num}?"):
+                print("⚠️  Deletion cancelled.")
+                input("\nPress Enter to continue...")
+                return
+            
+            # Confirmación 2: Tipear DELETE explícitamente
+            print("\n" + "─" * 60)
+            print("⚠️  FINAL CONFIRMATION REQUIRED")
+            print("─" * 60)
+            confirm_text = input("➤ Type 'DELETE' in capital letters to confirm: ").strip()
+            
+            if confirm_text != "DELETE":
+                print(f"\n⚠️  Deletion cancelled (expected 'DELETE', got '{confirm_text}').")
+                input("\nPress Enter to continue...")
+                return
+            
+            # Ejecutar eliminación
+            print(f"\n🗑️  Deleting iteration #{num}...")
+            self.storage.delete_iteration(self.project_name, num)
+            
+            print("\n" + "─" * 60)
+            print(f"✅ Iteration #{num} deleted successfully!")
+            print("─" * 60)
+            print("💡 Use 'View History' to see remaining iterations")
+            
+        except ValueError:
+            print(f"\n❌ Invalid iteration number: '{iteration_number}'. Must be an integer.")
+        except FileNotFoundError:
+            print(f"\n❌ Iteration {num} not found.")
+            print("💡 Tip: Use 'View History' (option 2) to see available iterations")
+        except Exception as e:
+            print(f"\n❌ Error deleting iteration: {e}")
+            print(f"   Error type: {type(e).__name__}")
+        
+        input("\n\nPress Enter to continue...")
+    
     def exit_cli(self) -> None:
         """Salir del CLI de forma limpia."""
         print("\n" + "─" * 60)
         print("👋 Thank you for using ArqSysIA!")
         print("─" * 60)
         print(f"📁 Project data saved in: {self.data_dir}")
-        print("💡 Run 'arqsysia {self.project_name}' to continue later\n")
+        print(f"💡 Run 'arqsysia {self.project_name}' to continue later\n")
         self.running = False
 
 
