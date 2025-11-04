@@ -271,22 +271,32 @@ class ArqSysiaCLI:
             print("─" * 60)
             print("⏳ This may take several minutes. Please wait...\n")
             
-            result = self.orchestrator.execute_iteration(requirements)
+            # Calcular próximo número de iteración
+            iterations = self.storage.list_iterations(self.project_name)
+            if iterations:
+                next_iteration = max(iter.iteration_number for iter in iterations) + 1
+            else:
+                next_iteration = 1
+            
+            result = self.orchestrator.run_iteration(
+                requirements=requirements,
+                iteration_number=next_iteration
+            )
             
             print("\n" + "─" * 60)
             print("✅ ITERATION COMPLETED!")
             print("─" * 60)
             # Auto-export si está habilitado
-            self._auto_export_if_enabled(iteration_number)  # ← LÍNEA NUEVA
+            self._auto_export_if_enabled(result.iteration)  # ← LÍNEA NUEVA
                         
             # Mostrar ubicación del archivo
-            iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
+            iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration:03d}.json"
             print(f"📁 Iteration file saved:")
             print(f"   {iteration_file}")
             print("💡 Copy this path to view or share the results")
             print("─" * 60)
             
-            self.viewer.show_iteration_result(result)
+            self.viewer.show_iteration_details(result.iteration)
             
             # Mostrar menú post-validación
             self._show_post_validation_menu(result)
@@ -351,14 +361,14 @@ class ArqSysiaCLI:
         print("─" * 60)
         
         # Construir ruta del archivo
-        iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
+        iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration:03d}.json"
         
         if iteration_file.exists():
             # Obtener tamaño del archivo
             file_size = iteration_file.stat().st_size
             size_kb = file_size / 1024
             
-            print(f"\n📄 File: iteration_{result.iteration_number:03d}.json")
+            print(f"\n📄 File: iteration_{result.iteration:03d}.json")
             print(f"📏 Size: {size_kb:.2f} KB ({file_size:,} bytes)")
             print(f"\n📂 Full path:")
             print(f"   {iteration_file.absolute()}")
@@ -685,8 +695,16 @@ class ArqSysiaCLI:
             print("─" * 60)
             print("⏳ This may take several minutes. Please wait...\n")
             
-            result = self.orchestrator.execute_iteration(
+            # Calcular próximo número de iteración
+            iterations = self.storage.list_iterations(self.project_name)
+            if iterations:
+                next_iteration = max(iter.iteration_number for iter in iterations) + 1
+            else:
+                next_iteration = 1
+            
+            result = self.orchestrator.run_iteration(
                 requirements=latest.state.original_requirements,
+                iteration_number=next_iteration,
                 user_feedback=feedback if feedback else None
             )
             
@@ -695,13 +713,13 @@ class ArqSysiaCLI:
             print("─" * 60)
             
             # Mostrar ubicación del archivo
-            iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
+            iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration:03d}.json"
             print(f"📁 Iteration file saved:")
             print(f"   {iteration_file}")
             print("💡 Copy this path to view or share the results")
             print("─" * 60)
             
-            self.viewer.show_iteration_result(result)
+            self.viewer.show_iteration_details(result.iteration)
             
             # Mostrar menú post-validación
             self._show_post_validation_menu(result)
