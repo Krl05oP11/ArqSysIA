@@ -12,6 +12,7 @@ from pathlib import Path
 from arqsysia.core import IterativeOrchestrator, IterationResult
 from arqsysia.storage.file_storage import FileStorage
 from arqsysia.cli.iteration_viewer import IterationViewer
+from arqsysia.cli.file_exporter import FileExporter, ExportConfig  # ← NUEVA LÍNEA
 from arqsysia.cli.diff_viewer import DiffViewer
 
 
@@ -67,6 +68,10 @@ class ArqSysiaCLI:
             self.orchestrator = IterativeOrchestrator(project_name, self.storage)
             self.viewer = IterationViewer(project_name, self.storage)
             self.diff_viewer = DiffViewer(project_name, self.storage)
+            # Exportación de archivos
+            self.exporter = FileExporter(project_name, data_dir)
+            self.export_config = ExportConfig(project_name, data_dir)
+            
             self.running = True
         except Exception as e:
             raise RuntimeError(f"Failed to initialize CLI components: {e}")
@@ -271,7 +276,9 @@ class ArqSysiaCLI:
             print("\n" + "─" * 60)
             print("✅ ITERATION COMPLETED!")
             print("─" * 60)
-            
+            # Auto-export si está habilitado
+            self._auto_export_if_enabled(iteration_number)  # ← LÍNEA NUEVA
+                        
             # Mostrar ubicación del archivo
             iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration_number:03d}.json"
             print(f"📁 Iteration file saved:")
@@ -455,6 +462,57 @@ class ArqSysiaCLI:
             print("💡 Use 'View Iteration' to see the new design")
         except Exception as e:
             print(f"\n❌ Error redesigning: {e}")
+            
+    def _auto_export_if_enabled(self, iteration_number: int):
+        """
+        Exporta automáticamente archivos si está habilitado en configuración.
+        
+        Args:
+            iteration_number: Número de iteración a exportar
+        """
+        if not self.export_config.is_auto_export_enabled():
+            return
+        
+        print("\n" + "─" * 60)
+        print("📤 AUTO-EXPORT ENABLED")
+        print("─" * 60)
+        print("\n🔄 Exporting iteration files to disk...")
+        
+        try:
+            # Obtener iteración para extraer archivos
+            iteration = self.orchestrator.version_manager.get_iteration(iteration_number)
+            
+            # Importar aquí para evitar circular imports
+            from arqsysia.cli.iteration_viewer import FileExtractor
+            
+            # Extraer archivos
+            files = FileExtractor.extract_files(iteration)
+            
+            # Exportar
+            result = self.exporter.export_files(
+                files=files,
+                iteration_number=iteration_number,
+                selected_only=False,
+                selected_files=None
+            )
+            
+            if result['success']:
+                print(f"\n✅ Auto-export successful!")
+                print(f"   Files exported: {result['exported_count']}")
+                print(f"   Location: {result['export_path']}")
+            else:
+                print(f"\n⚠️  Auto-export had issues")
+                if result['errors']:
+                    print("   Errors:")
+                    for error in result['errors'][:3]:  # Mostrar solo primeros 3
+                        print(f"   - {error}")
+            
+            print("\n" + "─" * 60)
+            
+        except Exception as e:
+            print(f"\n⚠️  Auto-export failed: {e}")
+            print("   (Iteration completed successfully, only export failed)")
+            print("\n" + "─" * 60)
     
     def view_history(self) -> None:
         """Ver historial de iteraciones con manejo de errores."""
@@ -654,19 +712,94 @@ class ArqSysiaCLI:
         input("\n\nPress Enter to continue...")
     
     def settings(self) -> None:
-        """Configurar opciones del proyecto."""
+        """Configuración del proyecto con opciones de exportación."""
+        while True:
+            print("\n" + "═" * 60)
+            print("SETTINGS")
+            print("═" * 60)
+            
+            # Obtener estado actual
+            auto_export = self.export_config.is_auto_export_enabled()
+            export_docs = self.export_config.get_option('export_technical_docs', True)
+            export_code = self.export_config.get_option('export_source_code', True)
+            
+            # Mostrar configuración actual
+            print(f"\n📊 Current Configuration:")
+            print("─" * 60)
+            print(f"  Project: {self.project_name}")
+            print(f"  Auto-export: {'✅ Enabled' if auto_export else '❌ Disabled'}")
+            print(f"  Export technical docs: {'✅ Yes' if export_docs else '❌ No'}")
+            print(f"  Export source code: {'✅ Yes' if export_code else '❌ No'}")
+            
+            # Mostrar estadísticas de exportaciones
+            exported_iterations = self.exporter.list_exported_iterations()
+            if exported_iterations:
+                print(f"\n  Exported iterations: {len(exported_iterations)}")
+                print(f"  Last exported: Iteration #{exported_iterations[-1]}")
+            else:
+                print(f"\n  Exported iterations: 0")
+            
+            print("\n" + "─" * 60)
+            print("\nOptions:")
+            print("  [1] Toggle auto-export (on/off)")
+            print("  [2] Toggle export technical docs")
+            print("  [3] Toggle export source code")
+            print("  [4] View export locations")
+            print("  [q] Back to main menu")
+            
+            choice = input("\nEnter option: ").strip().lower()
+            
+            if choice == 'q':
+                break
+            elif choice == '1':
+                new_state = self.export_config.toggle_auto_export()
+                status = "enabled" if new_state else "disabled"
+                print(f"\n✓ Auto-export {status}")
+                input("\nPress Enter to continue...")
+            elif choice == '2':
+                new_value = not export_docs
+                self.export_config.set_option('export_technical_docs', new_value)
+                status = "enabled" if new_value else "disabled"
+                print(f"\n✓ Export technical docs {status}")
+                input("\nPress Enter to continue...")
+            elif choice == '3':
+                new_value = not export_code
+                self.export_config.set_option('export_source_code', new_value)
+                status = "enabled" if new_value else "disabled"
+                print(f"\n✓ Export source code {status}")
+                input("\nPress Enter to continue...")
+            elif choice == '4':
+                self._show_export_locations()
+            else:
+                print("\n✗ Invalid option")
+                input("\nPress Enter to continue...")
+
+    def _show_export_locations(self):
+        """Muestra las ubicaciones de todas las exportaciones."""
         print("\n" + "═" * 60)
-        print("SETTINGS")
+        print("EXPORT LOCATIONS")
         print("═" * 60)
-        print("\n⚠️  Settings feature coming soon!")
-        print("\nPlanned features:")
-        print("  • Configure LLM models")
-        print("  • Adjust iteration parameters")
-        print("  • Set project preferences")
-        print("  • Export/Import settings")
+        
+        exported = self.exporter.list_exported_iterations()
+        
+        if not exported:
+            print("\n📭 No iterations have been exported yet")
+            print("\n💡 Tip: Enable auto-export in settings or use")
+            print("   the [e] option in the file explorer")
+        else:
+            print(f"\n📦 Exported iterations: {len(exported)}\n")
+            
+            for iter_num in exported:
+                export_path = self.exporter.get_export_path(iter_num)
+                print(f"  • Iteration #{iter_num:03d}")
+                print(f"    📁 {export_path}\n")
+            
+            print("─" * 60)
+            print("\nTo access exported files:")
+            print(f"  cd {self.data_dir}/{self.project_name}/exports")
         
         input("\nPress Enter to continue...")
-    
+                    
     def delete_iteration(self) -> None:
         """
         Eliminar una iteración con doble confirmación de seguridad.
