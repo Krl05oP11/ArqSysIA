@@ -531,7 +531,26 @@ class ArqSysiaCLI:
         print("═" * 60)
         
         try:
-            self.viewer.show_iteration_history()
+            iterations = self.storage.list_iterations(self.project_name)
+            
+            if not iterations:
+                print("\n📭 No iterations found for this project.")
+                print("💡 Create your first iteration with option 1")
+            else:
+                print(f"\n📊 Total iterations: {len(iterations)}\n")
+                print("┌─────┬──────────────────┬─────────┬────────┐")
+                print("│  #  │       Date       │  Score  │ Status │")
+                print("├─────┼──────────────────┼─────────┼────────┤")
+                
+                for iteration in sorted(iterations, key=lambda x: x.iteration_number):
+                    date_str = iteration.created_at.strftime("%Y-%m-%d %H:%M")
+                    score = iteration.final_scores.get('overall', 0) if iteration.final_scores else 0
+                    status = iteration.status or 'done'
+                    print(f"│ {iteration.iteration_number:>3} │ {date_str:<16} │ {score:>3}/100 │ {status:>6} │")
+                
+                print("└─────┴──────────────────┴─────────┴────────┘")
+                print("\n💡 Use option 3 to view details of a specific iteration")
+                
         except Exception as e:
             print(f"\n❌ Error displaying history: {e}")
             print(f"   Error type: {type(e).__name__}")
@@ -711,6 +730,8 @@ class ArqSysiaCLI:
             print("\n" + "─" * 60)
             print("✅ CONTINUATION COMPLETED!")
             print("─" * 60)
+            # Auto-export si está habilitado
+            self._auto_export_if_enabled(result.iteration)
             
             # Mostrar ubicación del archivo
             iteration_file = Path(self.data_dir) / self.project_name / "iterations" / f"iteration_{result.iteration:03d}.json"
