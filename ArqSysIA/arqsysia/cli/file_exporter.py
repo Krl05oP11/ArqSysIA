@@ -26,7 +26,7 @@ class FileExporter:
     def __init__(self, project_name: str, base_path: str = "./projects"):
         """
         Inicializar exportador.
-        
+
         Args:
             project_name: Nombre del proyecto
             base_path: Ruta base donde están los proyectos
@@ -34,6 +34,36 @@ class FileExporter:
         self.project_name = project_name
         self.base_path = Path(base_path)
         self.exports_dir = self.base_path / project_name / "exports"
+
+    def _is_safe_filename(self, filename: str) -> bool:
+        """
+        Valida que filename no contiene caracteres peligrosos.
+
+        Args:
+            filename: Nombre del archivo
+
+        Returns:
+            True si es seguro, False si no
+        """
+        dangerous = ['..', '/', '\\', '\0', '<', '>', ':', '"', '|', '?', '*']
+        return not any(char in filename for char in dangerous)
+
+    def _is_subpath(self, path: Path, parent: Path) -> bool:
+        """
+        Valida que path está dentro de parent directory.
+
+        Args:
+            path: Path a validar
+            parent: Path padre permitido
+
+        Returns:
+            True si path está dentro de parent, False si no
+        """
+        try:
+            path.resolve().relative_to(parent.resolve())
+            return True
+        except ValueError:
+            return False
     
     def export_files(
         self, 
@@ -117,22 +147,38 @@ class FileExporter:
     def _get_file_path(self, iteration_dir: Path, vfile) -> Path:
         """
         Determina la ruta completa del archivo según su categoría.
-        
+        CON VALIDACIÓN DE SEGURIDAD (Fix 5.1).
+
         Args:
             iteration_dir: Directorio base de la iteración
             vfile: VirtualFile a exportar
-            
+
         Returns:
             Path completo del archivo
+
+        Raises:
+            ValueError: Si el filename es inseguro o escapa del directorio
         """
+        # Fix 5.1: Validar nombre de archivo
+        if not self._is_safe_filename(vfile.name):
+            raise ValueError(f"Unsafe filename detected: {vfile.name}")
+
+        # Determinar subdirectorio según categoría
         if vfile.category == 'technical_docs':
             subdir = iteration_dir / "technical_docs"
         elif vfile.category == 'source_code':
             subdir = iteration_dir / "source_code"
         else:
             subdir = iteration_dir
-        
-        return subdir / vfile.name
+
+        # Construir path completo
+        file_path = (subdir / vfile.name).resolve()
+
+        # Fix 5.1: Validar que el path está dentro de iteration_dir
+        if not self._is_subpath(file_path, iteration_dir):
+            raise ValueError(f"Path escapes export directory: {vfile.name}")
+
+        return file_path
     
     def _create_export_readme(
         self, 

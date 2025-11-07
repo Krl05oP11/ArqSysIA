@@ -41,21 +41,44 @@ class ArqSysiaCLI:
     def __init__(self, project_name: str, data_dir: str = "./projects"):
         """
         Inicializar CLI.
-        
+
         Args:
             project_name: Nombre del proyecto
             data_dir: Directorio de datos (default: ./projects)
-        
+
         Raises:
             ValueError: Si project_name está vacío o contiene caracteres inválidos
         """
-        # Validar project_name
+        # Fix 1.2: Validación robusta de project_name
         if not project_name or not project_name.strip():
             raise ValueError("Project name cannot be empty")
-        
-        if any(char in project_name for char in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']):
-            raise ValueError("Project name contains invalid characters")
-        
+
+        # Lista completa de caracteres inválidos
+        invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0']
+        for char in invalid_chars:
+            if char in project_name:
+                raise ValueError(
+                    f"Project name cannot contain '{char}'. "
+                    f"Invalid characters: {', '.join(invalid_chars)}"
+                )
+
+        # Validar longitud máxima
+        if len(project_name) > 100:
+            raise ValueError("Project name is too long (max 100 characters)")
+
+        # Validar espacios al inicio/final
+        if project_name != project_name.strip():
+            raise ValueError("Project name cannot start/end with spaces")
+
+        # Validar nombres reservados (Windows)
+        reserved_names = ['CON', 'PRN', 'AUX', 'NUL',
+                          'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
+                          'COM6', 'COM7', 'COM8', 'COM9',
+                          'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5',
+                          'LPT6', 'LPT7', 'LPT8', 'LPT9']
+        if project_name.upper() in reserved_names:
+            raise ValueError(f"'{project_name}' is a reserved system name")
+
         self.project_name = project_name.strip()
         self.data_dir = data_dir
         
@@ -247,13 +270,22 @@ class ArqSysiaCLI:
             return
         
         requirements = '\n'.join(lines).strip()
-        
+
+        # Fix 1.1: Validar requirements vacíos y muy cortos
         if not requirements:
             print("\n❌ Requirements cannot be empty.")
             print("💡 Tip: Describe what you want to build, key features, and constraints")
             input("\nPress Enter to continue...")
             return
-        
+
+        # Validar longitud mínima
+        if len(requirements.strip()) < 10:
+            print("\n⚠️  Requirements seem too short (< 10 characters).")
+            if not self._confirm("Continue anyway?"):
+                print("⚠️  Iteration cancelled.")
+                input("\nPress Enter to continue...")
+                return
+
         # Confirmar antes de ejecutar
         print("\n" + "─" * 60)
         print(f"Requirements length: {len(requirements)} characters")

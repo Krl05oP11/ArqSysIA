@@ -95,27 +95,64 @@ class FileStorage(StorageBackend):
     def load_iteration(self, project_name: str, iteration_number: int) -> Optional[Iteration]:
         """
         Carga una iteración específica.
-        
+
         Args:
             project_name: Nombre del proyecto
             iteration_number: Número de iteración
-            
+
         Returns:
             Objeto Iteration o None si no existe
+
+        Raises:
+            FileNotFoundError: Si la iteración no existe
+            ValueError: Si el archivo está corrupto o tiene formato inválido
+            RuntimeError: Si hay errores de permisos u otros errores de I/O
         """
         iteration_file = self._get_iteration_file(project_name, iteration_number)
-        
+
         if not iteration_file.exists():
             raise FileNotFoundError(
                 f"Iteration {iteration_number} not found for project {project_name}"
             )
-        
-        # Cargar JSON
-        with open(iteration_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # Reconstruir objeto Iteration
-        return self._dict_to_iteration(data)
+
+        # Fix 2.1: Manejo robusto de errores con mensajes específicos
+        try:
+            # Cargar JSON
+            with open(iteration_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Reconstruir objeto Iteration
+            return self._dict_to_iteration(data)
+
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Iteration {iteration_number} file is corrupted (invalid JSON).\n"
+                f"File: {iteration_file}\n"
+                f"Error at line {e.lineno}, column {e.colno}: {e.msg}\n"
+                f"Suggestion: Delete the corrupted file or restore from backup."
+            )
+
+        except (TypeError, KeyError) as e:
+            raise ValueError(
+                f"Iteration {iteration_number} has invalid data format.\n"
+                f"File: {iteration_file}\n"
+                f"Missing or invalid field: {e}\n"
+                f"Suggestion: File may be from an older version. Check CHANGELOG for migrations."
+            )
+
+        except PermissionError:
+            raise RuntimeError(
+                f"Permission denied reading iteration {iteration_number}.\n"
+                f"File: {iteration_file}\n"
+                f"Suggestion: Check file permissions (chmod/chown)."
+            )
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Unexpected error loading iteration {iteration_number}.\n"
+                f"File: {iteration_file}\n"
+                f"Error: {type(e).__name__}: {e}"
+            )
     
     def list_iterations(self, project_name: str) -> List[Iteration]:
         """
