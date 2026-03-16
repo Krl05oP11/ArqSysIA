@@ -1,0 +1,41 @@
+{{!
+    @template block_saipa/chat_widget
+
+    SAIPA chat widget — Fase 0 placeholder.
+    Fase 1 will wire this to the real AJAX chat endpoint.
+
+    Context variables:
+    - courseid: int
+    - userid: int
+    - username: string
+    - wwwroot: string
+}}
+<div id="saipa-widget-{{courseid}}" class="saipa-chat-widget" data-courseid="{{courseid}}" data-userid="{{userid}}">
+    <div class="saipa-chat-header d-flex align-items-center p-2 bg-primary text-white rounded-top">
+        <span class="mr-2">&#129302;</span>
+        <strong>{{#str}} chat_title, block_saipa {{/str}}</strong>
+    </div>
+    <div id="saipa-messages-{{courseid}}" class="saipa-chat-messages p-2"
+         style="height:220px;overflow-y:auto;background:#f8f9fa;border:1px solid #dee2e6;">
+        <div class="text-muted small text-center pt-4">
+            {{#str}} chat_placeholder, block_saipa {{/str}}
+        </div>
+    </div>
+    <div class="saipa-chat-input input-group p-1 border border-top-0 rounded-bottom">
+        <input type="text"
+               id="saipa-input-{{courseid}}"
+               class="form-control form-control-sm"
+               placeholder="{{#str}} chat_placeholder, block_saipa {{/str}}"
+               aria-label="{{#str}} chat_placeholder, block_saipa {{/str}}">
+        <div class="input-group-append">
+            <button class="btn btn-primary btn-sm" id="saipa-send-{{courseid}}" type="button">
+                {{#str}} chat_send, block_saipa {{/str}}
+            </button>
+        </div>
+    </div>
+</div>
+{{#js}}
+require(['block_saipa/chat'], function(Chat) {
+    Chat.init({{courseid}}, '{{wwwroot}}');
+});
+{{/js}}

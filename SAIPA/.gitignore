@@ -1,0 +1,21 @@
+# LibreOffice lock files
+.~lock.*
+
+# Python
+saipa-engine/venv/
+saipa-engine/__pycache__/
+saipa-engine/**/__pycache__/
+saipa-engine/*.pyc
+saipa-engine/chroma_data/
+saipa-engine/.env
+
+# Environment files with credentials
+docker/moodle.env
+docker/saipa-engine.env
+
+# Moodle data
+docker/moodle-data/
+
+# OS
+.DS_Store
+Thumbs.db

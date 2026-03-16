@@ -1,0 +1,169 @@
+﻿---
+
+## INFORME 2: DOCUMENTO FUNDACIONAL Y ESTUDIO DE REQUISITOS DEL SISTEMA
+### Para el Equipo de Desarrollo (Arquitectura de Software, IA y Ciencia de Datos)
+
+**Proyecto:** Módulo de Acompañamiento Inteligente para Moodle (Código: *Moodle-SmartAssistant*)
+**Audiencia:** Desarrollador Principal (Ingeniería en Sistemas, IA, Ciencia de Datos)
+**Versión:** 1.0 (Documento Fundacional)
+**Fecha:** 24 de febrero de 2026
+
+---
+
+### 1. Introducción y Visión del Sistema
+
+Este documento establece las bases técnicas, arquitectónicas y de requisitos para el desarrollo de un módulo (plugin) para la plataforma Moodle. El objetivo es construir un **sistema agéntico de acompañamiento pedagógico** que mitigue la deserción estudiantil mediante personalización, analítica predictiva y comunicación omnicanal (con énfasis en WhatsApp), bajo la supervisión del equipo docente.
+
+**Visión Técnica:** Crear un ecosistema extensible, basado en microservicios serverless y modelos de lenguaje de código abierto (RAG) que se integre profundamente con las APIs de Moodle y servicios de mensajería, proporcionando una capa de inteligencia y comunicación que trascienda el campus virtual.
+
+---
+
+### 2. Estado del Arte y Precedentes Funcionales (Justificación Técnica)
+
+El desarrollo propuesto no es una entelequia. Existen pruebas de concepto y plugins funcionales que validan cada uno de los componentes previstos:
+
+- **Plugins de Mensajería:**
+    - **Custom API SMS Gateway:** Plugin que actúa como puente entre Moodle y cualquier proveedor de mensajería con API HTTP. Permite definir headers, parámetros y placeholders ({{recipient}}, {{message}}), lo que lo hace ideal para conectar con la API de WhatsApp Business o Twilio. Incluye un probador de API en vivo para debugging .
+    - **Plugin WhatsApp (DeveloperCK):** Plugin local que implementa verificación de número vía OTP y envía mensajes usando templates de WhatsApp, resolviendo la limitación de "conversación iniciada por el usuario" .
+    - **Plugin message_output_whatsapp:** Integración directa con Twilio API, demostrando la viabilidad de usar un proveedor externo consolidado .
+
+- **Asistentes Educativos con IA y RAG:**
+    - **Terus Rag Block:** Plugin de bloque para Moodle que implementa RAG con soporte para múltiples proveedores de IA (Gemini, OpenAI, Ollama, Anthropic) y motores de vectores (Moodle DB, ChromaDB, Supabase). Indexa automáticamente descripciones de cursos y actividades. Utiliza ranking híbrido (BM25 + similitud coseno) .
+    - **Moodle RAG Chatbot (KirillFazi):** Implementación independiente (FastAPI + LangChain + Ollama + ChromaDB) que demuestra la viabilidad de un sistema RAG con modelo local (Qwen2.5) para responder preguntas sobre Moodle con alta precisión .
+    - **Estudio RCAAP (Queirós & Soares, 2025):** Desarrollo de un bloque Moodle con asistente conversacional (Gemma3:12B), RAG con Flowise y gamificación. Valida la arquitectura modular y la viabilidad de integrar modelos open-source en entornos institucionales .
+    - **Sistema de Respuesta Automatizada (GRID'2025):** Arquitectura serverless (Supabase, Render, Vercel) con RAG y fine-tuning de modelos (Llama/Gemma). Demuestra la integración con VCL, la adaptación por roles y el mecanismo de auto-aprendizaje por feedback. Reporta reducción del 70% en tiempos de respuesta y 90% de precisión post-fine-tuning .
+
+- **Analítica Predictiva y Aceptación:**
+    - **MoodleBot (IEEE Transactions on Education):** Chatbot LLM integrado en Moodle con enfoque RAG. Evaluado con TAM (Technology Acceptance Model), demostró 88% de precisión en respuestas y alta aceptación estudiantil. Valida el uso de RAG para alinear respuestas con el contenido del curso y el enfoque en Self-Regulated Learning (SRL) .
+
+---
+
+### 3. Requisitos Funcionales del Sistema (Alto Nivel)
+
+Basado en el análisis de necesidades y los precedentes técnicos, se definen los siguientes módulos funcionales:
+
+**Módulo 1: Núcleo de Integración con Moodle**
+- Debe implementarse como un **plugin tipo 'bloque' y 'local'** para máxima flexibilidad.
+- Utilizará las APIs estándar de Moodle para acceder a: perfiles de usuario, calificaciones, actividades del curso, foros, y logs de interacción.
+- Implementará hooks para eventos (creación de contenido, envío de tareas, accesos) para disparar procesos asíncronos.
+
+**Módulo 2: Motor de Analítica Predictiva (Riesgo de Abandono)**
+- Modelo de machine learning (ej. basado en el plugin **Inspire** de Moodle) que evalúa indicadores de compromiso (presencia cognitiva, social y del docente).
+- **Output:** Etiqueta de probabilidad de abandono (Alto/Medio/Bajo) y factores contribuyentes.
+
+**Módulo 3: Asistente Pedagógico (Capa de IA)**
+- **Arquitectura:** RAG (Retrieval-Augmented Generation) para grounding de respuestas en el contenido del curso .
+- **Modelo base:** Preferentemente open-source y desplegable localmente (familia Llama, Gemma, Qwen) para garantizar privacidad de datos y personalización .
+- **Vector Store:** Opciones configurables: ChromaDB (embebido, simple) o Supabase (pgvector, cloud escalable) .
+- **Orquestación:** LangChain o Flowise para gestionar cadenas de procesamiento .
+- **Funcionalidades:**
+    - Responder preguntas sobre contenidos del curso.
+    - Generar resúmenes de progreso personalizados.
+    - Sugerir ejercicios de refuerzo basados en debilidades detectadas.
+    - Explicar errores en evaluaciones (feedback formativo).
+
+**Módulo 4: Motor de Comunicación Omnicanal**
+- **Canal principal:** WhatsApp Business API.
+- **Arquitectura de conexión:** Uso del plugin **Custom API SMS Gateway** como adaptador genérico, configurado para el proveedor elegido (Meta, Twilio, 360Dialog) .
+- **Gestión de Templates:** Sistema para crear y gestionar templates de mensajes aprobados por Meta para comunicación proactiva (recordatorios, alertas).
+- **Verificación de Números:** Implementar flujo de verificación vía OTP (similar a ) para asegurar que los números son válidos y el usuario consiente la comunicación.
+
+**Módulo 5: Panel de Control y Supervisión Docente**
+- Dashboard interactivo (puede usar librerías como Chart.js o integrarse con servicios como QuickSight ) que muestre:
+    - Vista de "Calor de la Clase": Indicadores globales de compromiso.
+    - Vista de "Estudiantes en Riesgo": Lista priorizada con motivos.
+    - Vista de "Diálogo con IA": Historial de interacciones de los estudiantes con el asistente para supervisión humana.
+    - Métricas de efectividad de las intervenciones.
+
+---
+
+### 4. Arquitectura de Referencia Propuesta
+
+Basada en la síntesis de las arquitecturas exitosas revisadas , se propone una arquitectura híbrida:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CAPA DE PRESENTACIÓN                               │
+│  (Moodle Core - Bloques/Interfaz nativa + Framer/Vercel para widgets) [4]   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CAPA DE INTEGRACIÓN (Moodle)                       │
+│  - Plugin tipo 'block' y 'local'                                             │
+│  - Hooks de Eventos (cron, creación/modificación de contenido) [9]          │
+│  - Adaptador de Mensajería (Custom API SMS Gateway) [1]                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │ (APIs REST/Webhooks)
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     CAPA DE PROCESAMIENTO Y ORQUESTACIÓN                     │
+│  (Backend Serverless - Ej. Render + Vercel Functions + Supabase Edge Func)  │
+│  - Orquestador de IA (LangChain / Flowise) [6][2]                            │
+│  - Gestor de Sesiones y Contexto                                             │
+│  - Gestor de Feedback para auto-aprendizaje [4]                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+            │                           │                           │
+            ▼                           ▼                           ▼
+┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
+│   CAPA DE DATOS       │ │   CAPA DE IA (Modelos)│ │ CAPA DE COMUNICACIÓN   │
+│  - Supabase (pgvector)│ │  - Ollama (Qwen/Llama)│ │  - WhatsApp Cloud API  │
+│    [4][9]             │ │  - Gemma3 (Flowise)   │ │  - Proveedor (Twilio,  │
+│  - ChromaDB (local)   │ │    [2][7]             │ │    360Dialog, etc.)    │
+│    [6][9]             │ │  - Fine-tuning por    │ │  - SMS / Email (fallback)
+│  - Moodle DB (fallback│ │    feedback [4]       │ │                         │
+│    BM25) [9]          │ │                       │ │                         │
+└───────────────────────┘ └───────────────────────┘ └───────────────────────┘
+```
+
+**Flujo de Procesamiento (Ejemplo: Consulta de Estudiante por WhatsApp):**
+
+1.  **Ingreso:** Estudiante envía "¿Cuándo es la entrega del TP2?" por WhatsApp.
+2.  **Recepción:** La API de WhatsApp Business recibe el mensaje y mediante un webhook lo envía a nuestra función serverless (Vercel/Edge Function).
+3.  **Identificación:** La función consulta la API de Moodle para identificar al usuario por su número de teléfono y obtener su rol, cursos, etc.
+4.  **Búsqueda (RAG):**
+    - La query se convierte en embedding (ej. con `all-MiniLM-L6-v2` ).
+    - Se realiza búsqueda de similitud en el Vector Store (Supabase/ChromaDB) para recuperar los fragmentos más relevantes del curso (fechas de entrega del TP2).
+5.  **Generación:**
+    - Se construye un prompt con el contexto recuperado, el rol del usuario y la query.
+    - Se envía al LLM local (Ollama con Qwen/Llama) para generar una respuesta precisa y amigable .
+6.  **Respuesta:** La respuesta se envía de vuelta al estudiante por WhatsApp.
+7.  **Registro y Aprendizaje:** La interacción se guarda en la base de datos. Si el estudiante califica la respuesta, ese feedback se usa para futuros fine-tunings .
+
+---
+
+### 5. Consideraciones Técnicas Clave
+
+**5.1. Modelos de IA y Privacidad**
+- **Recomendación:** Optar por modelos open-source desplegados on-premise o en VPC (Llama 3, Gemma 2, Qwen 2.5). Esto garantiza que los datos académicos sensibles no salgan del control de la institución.
+- **Embeddings:** Modelos ligeros como `all-MiniLM-L6-v2` ofrecen un buen balance entre rendimiento y precisión .
+
+**5.2. Integración con WhatsApp**
+- **API Oficial:** El camino a largo plazo es usar la API oficial de WhatsApp Business. Requiere verificación de negocio (2-6 semanas), número de teléfono dedicado y aprobación de templates .
+- **Proveedores Intermedios:** Twilio, 360Dialog o MessageBird simplifican el proceso a cambio de un costo por mensaje. La integración con Moodle a través de Custom API Gateway es directa .
+- **Manejo de Templates:** Obligatorio para comunicación proactiva (primer mensaje). Diseñar templates genéricos con placeholders para personalización .
+
+**5.3. Desafíos y Mitigaciones**
+- **Alucinaciones:** El uso de RAG mitiga fuertemente este riesgo al "groundear" las respuestas en contenido factual .
+- **Escalabilidad:** La arquitectura serverless propuesta (Funciones como servicio + bases de datos gestionadas) escala horizontalmente de forma automática .
+- **Adopción Docente:** El sistema debe ser un "aumento", no una "automatización ciega". Los dashboards de supervisión y la capacidad de intervenir son cruciales.
+
+---
+
+### 6. Roadmap de Desarrollo Propuesto (Fases)
+
+- **Fase 1 (Fundación - MVP):** Plugin bloque Moodle con conexión a API de WhatsApp (vía Custom Gateway). Envío manual de recordatorios. Dashboard básico con datos de Moodle.
+- **Fase 2 (Capa de IA - RAG):** Implementación del asistente conversacional para responder preguntas sobre el curso. Integración con Vector Store y LLM local (Ollama). Panel de supervisión de conversaciones para docentes.
+- **Fase 3 (Analítica Predictiva):** Implementación del motor de riesgo de abandono basado en logs de Moodle. Alertas automáticas proactivas por WhatsApp a estudiantes en riesgo.
+- **Fase 4 (Personalización y Feedback):** Mecanismo de auto-aprendizaje basado en feedback de usuarios. Generación automática de resúmenes de progreso semanales. Soporte multicanal completo (SMS, Email).
+- **Fase 5 (Madurez):** Fine-tuning de modelos por dominio de conocimiento. Integración con sistemas SIU/Guaraní. Marketplace de prompts y templates.
+
+---
+
+### 7. Conclusión para el Equipo de Desarrollo
+
+El proyecto es técnicamente ambicioso pero absolutamente factible. La existencia de numerosos plugins y papers que resuelven problemas específicos nos permite adoptar un enfoque de **"desarrollo por integración y refinamiento"** , más que de invención desde cero. La arquitectura propuesta es modular, lo que permitirá entregar valor incrementalmente.
+
+El mayor desafío no será técnico, sino de **diseño de experiencia**: lograr que el sistema sea percibido por alumnos y docentes como un acompañante cálido y no como un vigilante. La arquitectura de agentes debe priorizar la transparencia y el control humano.
+
+Este documento fundacional servirá como guía para la elaboración del detallado Estudio de Requisitos y la Definición de Sprint 0. Se procederá a la validación de la arquitectura con un spike técnico (Fase 0: Conectar Moodle con WhatsApp usando Custom API Gateway y un proveedor de prueba).

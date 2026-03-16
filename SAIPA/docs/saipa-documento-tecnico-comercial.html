@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAIPA — Documento Técnico y Comercial</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.65;
+      color: #1a1a2e;
+      background: #fff;
+    }
+
+    .page {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 18mm 22mm 18mm 25mm;
+    }
+
+    /* ── PORTADA ── */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40mm 25mm;
+      background: linear-gradient(160deg, #2A1005 0%, #3A1A08 55%, #1a0d03 100%);
+      color: white;
+      page-break-after: always;
+    }
+    .cover-badge {
+      font-size: 9pt; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: #e8c49a; margin-bottom: 16px;
+    }
+    .cover h1 {
+      font-size: 36pt; font-weight: 800; line-height: 1.1;
+      margin-bottom: 10px; color: #faf7f2;
+    }
+    .cover h1 span { color: #e8a060; }
+    .cover-subtitle {
+      font-size: 14pt; font-weight: 300; color: #d4b896;
+      margin-bottom: 48px; max-width: 130mm;
+    }
+    .cover-divider { width: 60px; height: 3px; background: #e8a060; margin-bottom: 40px; }
+    .cover-meta { font-size: 9.5pt; color: #c8a880; line-height: 2; }
+    .cover-meta strong { color: #faf7f2; }
+    .cover-logo {
+      position: absolute; top: 30mm; right: 25mm;
+      font-size: 10pt; color: #e8c49a; letter-spacing: 2px;
+      text-transform: uppercase; font-weight: 700;
+    }
+
+    /* ── ÍNDICE ── */
+    .toc { page-break-after: always; }
+    .toc h2 { font-size: 18pt; color: #3A1A08; margin-bottom: 24px; font-weight: 700; }
+    .toc ol { list-style: none; counter-reset: toc; }
+    .toc ol li { counter-increment: toc; display: flex; align-items: baseline;
+                 padding: 7px 0; border-bottom: 1px dotted #d0c0a8; font-size: 10.5pt; }
+    .toc ol li::before { content: counter(toc) "."; min-width: 28px;
+                         font-weight: 700; color: #3A1A08; }
+    .toc ol li span { flex: 1; }
+    .toc ol li .pg { color: #888; font-size: 9.5pt; }
+    .toc-sub { padding-left: 28px !important; font-size: 10pt !important; color: #555; }
+    .toc-sub::before { content: "" !important; }
+
+    /* ── SECCIONES ── */
+    h2.section-title {
+      font-size: 18pt; font-weight: 800; color: #3A1A08;
+      margin: 32px 0 6px; padding-bottom: 8px;
+      border-bottom: 3px solid #e8a060;
+    }
+    h3 { font-size: 13pt; font-weight: 700; color: #2A1005; margin: 24px 0 10px; }
+    h4 { font-size: 11pt; font-weight: 700; color: #3A1A08; margin: 18px 0 8px; }
+    p { margin-bottom: 12px; }
+
+    /* ── CALLOUTS ── */
+    .callout {
+      border-left: 4px solid #e8a060; background: #fdf6ee;
+      padding: 14px 18px; margin: 18px 0; border-radius: 0 6px 6px 0;
+    }
+    .callout.blue { border-color: #1565c0; background: #e8f0fe; }
+    .callout.green { border-color: #2e7d32; background: #e8f5e9; }
+    .callout.red { border-color: #c62828; background: #ffebee; }
+    .callout strong { color: #2A1005; }
+
+    /* ── TABLAS ── */
+    table {
+      width: 100%; border-collapse: collapse;
+      margin: 18px 0; font-size: 10pt;
+    }
+    th {
+      background: #3A1A08; color: #faf7f2;
+      padding: 9px 12px; text-align: left;
+      font-weight: 600; font-size: 9.5pt;
+    }
+    td { padding: 8px 12px; border-bottom: 1px solid #e8ddd0; vertical-align: top; }
+    tr:nth-child(even) td { background: #fdf8f3; }
+    tr:hover td { background: #f5ede0; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 8.5pt; font-weight: 700;
+    }
+    .badge-yes { background: #c8e6c9; color: #1b5e20; }
+    .badge-no  { background: #ffcdd2; color: #b71c1c; }
+    .badge-rec { background: #fff9c4; color: #f57f17; }
+
+    /* ── CÓDIGO ── */
+    pre {
+      background: #1a1a2e; color: #e8e4de;
+      padding: 16px 20px; border-radius: 8px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 9pt; line-height: 1.6; overflow-x: auto;
+      margin: 16px 0;
+    }
+    code {
+      background: #f0e8dc; color: #3A1A08;
+      padding: 1px 5px; border-radius: 3px;
+      font-family: 'Consolas', monospace; font-size: 9.5pt;
+    }
+    pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+    /* ── MERMAID ── */
+    .diagram-container {
+      background: #fdf8f3; border: 1px solid #e0d0bc;
+      border-radius: 8px; padding: 20px 16px;
+      margin: 20px 0; text-align: center;
+    }
+    .diagram-title {
+      font-size: 9pt; font-weight: 700; color: #888;
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+
+    /* ── FASES ── */
+    .phase-card {
+      border: 1px solid #e0d0bc; border-radius: 8px;
+      margin: 16px 0; overflow: hidden;
+    }
+    .phase-header {
+      background: #3A1A08; color: #faf7f2;
+      padding: 10px 18px; display: flex;
+      align-items: center; gap: 14px;
+    }
+    .phase-num {
+      background: #e8a060; color: #2A1005;
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13pt; flex-shrink: 0;
+    }
+    .phase-header h3 { color: #faf7f2; margin: 0; font-size: 11.5pt; }
+    .phase-header .phase-time { color: #e8c49a; font-size: 9pt; margin-left: auto; }
+    .phase-body { padding: 14px 18px; }
+    .phase-body ul { list-style: none; }
+    .phase-body ul li { padding: 3px 0; }
+    .phase-body ul li::before { content: "□ "; color: #e8a060; font-weight: 700; }
+
+    /* ── PRECIO ── */
+    .price-box {
+      background: linear-gradient(135deg, #2A1005, #3A1A08);
+      color: #faf7f2; border-radius: 10px;
+      padding: 24px 28px; margin: 20px 0;
+    }
+    .price-box h4 { color: #e8a060; font-size: 13pt; margin-bottom: 16px; }
+    .price-row { display: flex; justify-content: space-between;
+                 align-items: baseline; padding: 6px 0;
+                 border-bottom: 1px solid #5a3020; }
+    .price-row:last-child { border-bottom: none; padding-top: 12px;
+                            font-size: 13pt; font-weight: 700; color: #e8a060; }
+    .price-label { color: #d4b896; }
+    .price-value { font-weight: 700; }
+
+    /* ── FOOTER ── */
+    .doc-footer {
+      margin-top: 50px; padding-top: 16px;
+      border-top: 2px solid #e8a060;
+      display: flex; justify-content: space-between;
+      font-size: 8.5pt; color: #888;
+    }
+
+    /* ── PÁGINA BREAK ── */
+    .page-break { page-break-before: always; }
+
+    @media print {
+      .page { padding: 15mm 18mm 15mm 20mm; }
+      .cover { min-height: 100vh; }
+      pre { font-size: 8pt; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     PORTADA
+══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">Schaller &amp; Ponce</div>
+  <div class="cover-badge">Documento Técnico y Comercial · v1.0</div>
+  <h1>SAIPA<br><span>Sistema de Acompañamiento</span><br><span>Inteligente para la</span><br><span>Personalización del Aprendizaje</span></h1>
+  <div class="cover-subtitle">Plugin Moodle con IA · Analítica Predictiva · WhatsApp · Asistente Pedagógico</div>
+  <div class="cover-divider"></div>
+  <div class="cover-meta">
+    <strong>Proyecto:</strong> SAIPA — Moodle Plugin Comercial<br>
+    <strong>Versión:</strong> 1.0 — Documento Fundacional<br>
+    <strong>Fecha:</strong> 16 de marzo de 2026<br>
+    <strong>Autores:</strong> Carlos Schaller · Schaller &amp; Ponce Consultores<br>
+    <strong>Estado:</strong> Planificación — Pre-desarrollo
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÍNDICE
+══════════════════════════════════════════════════════════ -->
+<div class="page toc">
+  <h2>Índice de Contenidos</h2>
+  <ol>
+    <li><span>Visión y Propuesta de Valor</span></li>
+    <li><span>Arquitectura del Sistema</span></li>
+    <li class="toc-sub"><span>2.1 · Las tres capas tecnológicas</span></li>
+    <li class="toc-sub"><span>2.2 · Componentes del plugin Moodle</span></li>
+    <li class="toc-sub"><span>2.3 · Backend Python (saipa-engine)</span></li>
+    <li><span>Requisitos de Aceptación en Moodle Plugin Directory</span></li>
+    <li class="toc-sub"><span>3.1 · Estructura de archivos por tipo de plugin</span></li>
+    <li class="toc-sub"><span>3.2 · version.php — formato exacto</span></li>
+    <li class="toc-sub"><span>3.3 · APIs de seguridad obligatorias</span></li>
+    <li class="toc-sub"><span>3.4 · Privacy API (GDPR)</span></li>
+    <li class="toc-sub"><span>3.5 · Coding standards y licencia</span></li>
+    <li><span>Esquema de Base de Datos</span></li>
+    <li><span>Stack Tecnológico</span></li>
+    <li><span>Plan de Desarrollo — 5 Fases</span></li>
+    <li><span>Modelo de Comercialización</span></li>
+    <li class="toc-sub"><span>6.1 · El modelo dual: GPL + propietario</span></li>
+    <li class="toc-sub"><span>6.2 · Tres modelos de venta</span></li>
+    <li class="toc-sub"><span>6.3 · Flujo completo: del directorio a la venta</span></li>
+    <li class="toc-sub"><span>6.4 · Estructura de precios sugerida</span></li>
+    <li><span>Decisiones Tomadas y Pendientes</span></li>
+    <li><span>Próximos Pasos — Fase 0</span></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 1 — VISIÓN
+══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <h2 class="section-title">1. Visión y Propuesta de Valor</h2>
+
+  <p>SAIPA es un <strong>ecosistema de acompañamiento pedagógico</strong> que se integra a Moodle para mitigar la deserción estudiantil mediante tres pilares: un asistente conversacional con IA, analítica predictiva de riesgo de abandono, y comunicación proactiva por WhatsApp.</p>
+
+  <div class="callout green">
+    <strong>Insight pedagógico central:</strong> La deserción rara vez es repentina. Se anuncia con semanas de anticipación a través de señales medibles: caída en la interacción, tareas sin entregar, ausencia de acceso a la plataforma. SAIPA detecta esas señales y actúa antes de que sea tarde.
+  </div>
+
+  <h3>Para el Estudiante</h3>
+  <table>
+    <tr><th>Funcionalidad</th><th>Descripción</th><th>Canal</th></tr>
+    <tr><td><strong>Tutor 24/7</strong></td><td>Responde dudas sobre contenidos del curso en lenguaje natural</td><td>Chat web + WhatsApp</td></tr>
+    <tr><td><strong>Espejo de progreso</strong></td><td>Muestra logros, avances y áreas de mejora en lenguaje claro</td><td>Moodle + WhatsApp</td></tr>
+    <tr><td><strong>Recordatorio amigable</strong></td><td>Avisa fechas de entrega con tono cálido y propositivo</td><td>WhatsApp</td></tr>
+    <tr><td><strong>Señal de cuidado</strong></td><td>Consulta proactivamente si el alumno necesita ayuda tras días de inactividad</td><td>WhatsApp</td></tr>
+  </table>
+
+  <h3>Para el Docente</h3>
+  <table>
+    <tr><th>Funcionalidad</th><th>Descripción</th></tr>
+    <tr><td><strong>Alerta temprana</strong></td><td>Semáforo de riesgo por estudiante con factores explicativos</td></tr>
+    <tr><td><strong>Panel de conversaciones</strong></td><td>Historial de interacciones alumno-IA para supervisión humana</td></tr>
+    <tr><td><strong>Generación de rúbricas</strong></td><td>Borradores automáticos basados en objetivos de la cátedra</td></tr>
+    <tr><td><strong>Resumen semanal</strong></td><td>Estado de engagement de la clase en un vistazo</td></tr>
+  </table>
+
+  <div class="callout blue">
+    <strong>Diferenciador clave:</strong> WhatsApp tiene una tasa de apertura del 98% vs. el 25% del correo institucional. SAIPA lleva la universidad al lugar donde viven emocionalmente los estudiantes: su teléfono.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 2 — ARQUITECTURA
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">2. Arquitectura del Sistema</h2>
+
+  <h3>2.1 Las Tres Capas Tecnológicas</h3>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Arquitectura General de SAIPA</div>
+    <pre class="mermaid">
+graph TB
+    subgraph CAPA1["CAPA 1 — Moodle (PHP 8.1+)"]
+        P1["block_saipa\nWidget chat del estudiante"]
+        P2["local_saipa\nNúcleo: DB · Cron · Eventos · Admin · Web Services"]
+        P3["message_output_saipa\nCanal WhatsApp en notificaciones Moodle"]
+    end
+
+    subgraph CAPA2["CAPA 2 — Backend IA (Python / FastAPI · Puerto 8052)"]
+        B1["RAG Engine\nLangChain · ChromaDB · Ollama (Qwen 2.5 14B)"]
+        B2["Analytics\nXGBoost · Riesgo de abandono"]
+        B3["WhatsApp Bridge\nMeta Cloud API / Twilio"]
+    end
+
+    subgraph CAPA3["CAPA 3 — Servicios Externos"]
+        E1["WhatsApp Business API\n(Meta Cloud / Twilio)"]
+        E2["Ollama\n(LLM local en servidor)"]
+        E3["ChromaDB\n(Vector Store)"]
+    end
+
+    P1 -->|AJAX / Web Services| P2
+    P2 -->|HTTP POST| B1
+    P2 -->|HTTP POST| B2
+    P3 -->|HTTP POST| B3
+    B1 --> E2
+    B1 --> E3
+    B3 --> E1
+
+    style CAPA1 fill:#fdf0e0,stroke:#e8a060,stroke-width:2px
+    style CAPA2 fill:#e8f0fe,stroke:#1565c0,stroke-width:2px
+    style CAPA3 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    </pre>
+  </div>
+
+  <h3>2.2 Componentes del Plugin Moodle</h3>
+
+  <table>
+    <tr><th>Plugin</th><th>Tipo Moodle</th><th>Responsabilidad Principal</th></tr>
+    <tr>
+      <td><code>local_saipa</code></td>
+      <td>local</td>
+      <td>Núcleo del sistema: esquema de DB, cron, observadores de eventos, configuración admin, web services REST para comunicarse con el frontend JS y el bridge Python</td>
+    </tr>
+    <tr>
+      <td><code>block_saipa</code></td>
+      <td>block</td>
+      <td>Widget de chat visible al estudiante en el sidebar del curso. Template Mustache + módulo AMD JS. Muestra historial de conversación y feedback.</td>
+    </tr>
+    <tr>
+      <td><code>message_output_saipa</code></td>
+      <td>message output</td>
+      <td>Canal WhatsApp integrado en el sistema de notificaciones nativo de Moodle. Permite que cualquier evento Moodle dispare un mensaje WhatsApp al estudiante.</td>
+    </tr>
+  </table>
+
+  <h3>2.3 Backend Python — saipa-engine</h3>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Flujo de una consulta del estudiante (RAG)</div>
+    <pre class="mermaid">
+sequenceDiagram
+    participant E as Estudiante
+    participant W as Widget (JS)
+    participant M as local_saipa (PHP)
+    participant B as saipa-engine (Python)
+    participant C as ChromaDB
+    participant L as Ollama / Qwen
+
+    E->>W: "¿Cuándo vence el TP2?"
+    W->>M: Web Service (AJAX)
+    M->>B: POST /chat {mensaje, userid, courseid}
+    B->>C: Búsqueda semántica (embedding query)
+    C-->>B: Fragmentos relevantes del curso
+    B->>L: Prompt = contexto + historial + query
+    L-->>B: Respuesta generada
+    B-->>M: {respuesta, fuentes}
+    M->>M: Guarda en saipa_messages
+    M-->>W: JSON respuesta
+    W-->>E: "El TP2 vence el jueves 20/3 a las 23:59 hs."
+    </pre>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 3 — REQUISITOS MOODLE
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">3. Requisitos de Aceptación — Moodle Plugin Directory</h2>
+
+  <h3>3.1 Estructura de Archivos — Obligatoria por Tipo</h3>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Árbol de archivos — local_saipa (plugin núcleo)</div>
+    <pre class="mermaid">
+graph LR
+    R["local/saipa/"] --> VP["version.php ✅ OBLIGATORIO"]
+    R --> DB["db/"]
+    R --> LG["lang/"]
+    R --> CL["classes/"]
+    R --> ST["settings.php"]
+    R --> TS["tests/"]
+
+    DB --> DA["access.php ✅ OBLIGATORIO"]
+    DB --> DI["install.xml ✅ (si usa tablas)"]
+    DB --> DU["upgrade.php ✅ (para actualizaciones)"]
+    DB --> DS["services.php — web services"]
+    DB --> DT["tasks.php — cron programado"]
+    DB --> DE["events.php — observadores"]
+
+    LG --> LE["en/local_saipa.php ✅ OBLIGATORIO"]
+    LG --> LS["es/local_saipa.php"]
+
+    CL --> CP["privacy/provider.php ✅ GDPR"]
+    CL --> CE["external/ — web services"]
+    CL --> CT["task/ — clases cron"]
+    CL --> CO["event/ — observers"]
+
+    style VP fill:#c8e6c9,stroke:#2e7d32
+    style DA fill:#c8e6c9,stroke:#2e7d32
+    style DI fill:#c8e6c9,stroke:#2e7d32
+    style DU fill:#c8e6c9,stroke:#2e7d32
+    style LE fill:#c8e6c9,stroke:#2e7d32
+    style CP fill:#c8e6c9,stroke:#2e7d32
+    </pre>
+  </div>
+
+  <h3>3.2 Checklist de Aceptación</h3>
+
+  <table>
+    <tr><th>Requisito</th><th>Estado</th><th>Notas</th></tr>
+    <tr><td><code>version.php</code> con campos obligatorios</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>component, version, requires</td></tr>
+    <tr><td><code>db/access.php</code> con capabilities</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Incluso si está vacío inicialmente</td></tr>
+    <tr><td><code>lang/en/</code> archivo de strings</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Inglés como mínimo</td></tr>
+    <tr><td>Ícono <code>pix/icon.svg</code> o <code>icon.png</code></td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Solo para block y message plugins</td></tr>
+    <tr><td>Privacy API (GDPR)</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>SAIPA almacena datos personales → obligatorio</td></tr>
+    <tr><td>APIs de seguridad (<code>require_login</code>, sesskey, <code>$DB</code>)</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Sin SQL crudo, sin <code>$_GET</code>/<code>$_POST</code> directo</td></tr>
+    <tr><td>Licencia GPL v3 en headers</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Todos los archivos PHP</td></tr>
+    <tr><td>Coding Standard (PHPCS moodle)</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Verificado con moodle-cs</td></tr>
+    <tr><td>Tests PHPUnit</td><td><span class="badge badge-rec">RECOMENDADO</span></td><td>Necesario para MATURITY_STABLE</td></tr>
+    <tr><td>Tests Behat</td><td><span class="badge badge-rec">RECOMENDADO</span></td><td>Flujos principales</td></tr>
+    <tr><td>README.md + CHANGELOG.md</td><td><span class="badge badge-rec">RECOMENDADO</span></td><td>Para publicación en directorio</td></tr>
+    <tr><td>Compatibilidad MySQL + PostgreSQL</td><td><span class="badge badge-yes">OBLIGATORIO</span></td><td>Ambos motores deben funcionar</td></tr>
+  </table>
+
+  <h3>3.3 version.php — Formato Exacto (Moodle 4.4+)</h3>
+
+  <pre><code>&lt;?php
+defined('MOODLE_INTERNAL') || die();
+
+$plugin->component = 'local_saipa';       // frankenstyle: type_name
+$plugin->version   = 2026031600;          // formato: yyyymmddHH
+$plugin->requires  = 2024042200;          // Moodle 4.4 mínimo
+$plugin->maturity  = MATURITY_ALPHA;      // ALPHA → BETA → RC → STABLE
+$plugin->release   = '0.1.0';
+$plugin->supported = [404, 500];          // Moodle 4.4 hasta 5.0
+$plugin->dependencies = [
+    'block_saipa' => 2026031600,
+];</code></pre>
+
+  <h3>3.4 Compatibilidad Moodle 4.4 y 5.0</h3>
+
+  <div class="callout">
+    <strong>Moodle 5.0</strong> fue lanzado en mayo de 2025. Cambios clave a considerar en nuestro desarrollo:
+  </div>
+
+  <table>
+    <tr><th>Aspecto</th><th>Moodle 4.4</th><th>Moodle 5.0</th><th>Impacto en SAIPA</th></tr>
+    <tr><td>PHP mínimo</td><td>8.1</td><td><strong>8.2</strong></td><td>Desarrollar en PHP 8.2 desde el inicio</td></tr>
+    <tr><td>APIs deprecadas</td><td>presentes</td><td><strong>eliminadas</strong></td><td>No usar APIs marcadas deprecated en 4.x</td></tr>
+    <tr><td>Bootstrap</td><td>4.x</td><td><strong>5.x</strong></td><td>Usar clases Bootstrap agnósticas en templates</td></tr>
+    <tr><td>Plugin API core</td><td>estable</td><td>compatible atrás</td><td>Sin cambios arquitectónicos necesarios</td></tr>
+    <tr><td>External functions</td><td>namespaced</td><td>namespaced</td><td>Sin cambios (ya usamos el formato nuevo)</td></tr>
+  </table>
+
+  <p><strong>Estrategia:</strong> CI/CD con GitHub Actions testeará automáticamente contra Moodle 4.4, 4.5 y 5.0 en cada commit.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 4 — BASE DE DATOS
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">4. Esquema de Base de Datos</h2>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Tablas propias de SAIPA (prefijo: saipa_)</div>
+    <pre class="mermaid">
+erDiagram
+    saipa_sessions {
+        int id PK
+        int userid FK
+        int courseid FK
+        text context
+        int timecreated
+        int timemodified
+    }
+    saipa_messages {
+        int id PK
+        int sessionid FK
+        string role
+        text content
+        int timecreated
+        int feedback_rating
+    }
+    saipa_risk_scores {
+        int id PK
+        int userid FK
+        int courseid FK
+        float score
+        text factors_json
+        int timecomputed
+    }
+    saipa_phone_verify {
+        int id PK
+        int userid FK
+        string phone
+        string otp
+        int verified
+        int timecreated
+    }
+    saipa_notifications {
+        int id PK
+        int userid FK
+        string template
+        text params_json
+        string status
+        int timesent
+    }
+    saipa_course_index {
+        int id PK
+        int courseid FK
+        int last_indexed
+        int chunk_count
+        string status
+    }
+
+    saipa_sessions ||--o{ saipa_messages : "contiene"
+    saipa_sessions }o--|| saipa_risk_scores : "genera"
+    saipa_messages ||--o| saipa_notifications : "puede disparar"
+    </pre>
+  </div>
+
+  <h3>Descripción de Tablas</h3>
+  <table>
+    <tr><th>Tabla</th><th>Propósito</th><th>Datos personales (GDPR)</th></tr>
+    <tr><td><code>saipa_sessions</code></td><td>Sesiones de chat activas e históricas</td><td>Sí — userid, contexto de conversación</td></tr>
+    <tr><td><code>saipa_messages</code></td><td>Historial completo de mensajes por sesión</td><td>Sí — contenido de mensajes del usuario</td></tr>
+    <tr><td><code>saipa_risk_scores</code></td><td>Scores diarios de riesgo de abandono por estudiante</td><td>Sí — perfil de comportamiento académico</td></tr>
+    <tr><td><code>saipa_phone_verify</code></td><td>Verificación OTP de número WhatsApp</td><td>Sí — número de teléfono</td></tr>
+    <tr><td><code>saipa_notifications</code></td><td>Log de mensajes WhatsApp enviados</td><td>Sí — historial de comunicaciones</td></tr>
+    <tr><td><code>saipa_course_index</code></td><td>Estado de indexación RAG por curso</td><td>No — solo metadatos técnicos</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 5 — STACK TECNOLÓGICO
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">5. Stack Tecnológico</h2>
+
+  <table>
+    <tr><th>Componente</th><th>Tecnología Elegida</th><th>Justificación</th></tr>
+    <tr><td>Plugin PHP</td><td>Moodle 4.4+ / PHP 8.2</td><td>Estándar del ecosistema; compatible con 5.0</td></tr>
+    <tr><td>UI widget</td><td>Mustache + AMD (RequireJS)</td><td>Nativo Moodle; no depende de frameworks externos</td></tr>
+    <tr><td>Backend IA</td><td>Python 3.11 / FastAPI</td><td>Mismo patrón exitoso que UCTP-IA (solver_bridge)</td></tr>
+    <tr><td>LLM</td><td>Ollama + Qwen 2.5 14B</td><td>Ya disponible en el servidor; privacidad total; 16k context</td></tr>
+    <tr><td>Embeddings</td><td>all-MiniLM-L6-v2</td><td>sentence-transformers; ligero, preciso, open-source</td></tr>
+    <tr><td>Vector Store</td><td>ChromaDB (Fase 1-3) → pgvector (Fase 4+)</td><td>Simple y embebido para MVP; pgvector escala mejor</td></tr>
+    <tr><td>Orquestación RAG</td><td>LangChain</td><td>Mayor soporte comunitario que Flowise; Python nativo</td></tr>
+    <tr><td>Riesgo abandono</td><td>XGBoost / scikit-learn</td><td>Excelente para datos tabulares de Moodle; interpretable</td></tr>
+    <tr><td>WhatsApp</td><td>Meta Cloud API (prod) / Twilio (dev)</td><td>Meta: gratis hasta 1000 conv/mes. Twilio: configuración inmediata</td></tr>
+    <tr><td>Base de datos</td><td>PostgreSQL</td><td>Consistente con UCTP-IA; mejor soporte de JSON y pgvector</td></tr>
+    <tr><td>Contenerización</td><td>Docker Compose</td><td>Instalación reproducible en cualquier servidor universitario</td></tr>
+    <tr><td>CI/CD</td><td>GitHub Actions + moodle-plugin-ci</td><td>Tests automáticos contra Moodle 4.4, 4.5 y 5.0</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 6 — PLAN DE DESARROLLO
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">6. Plan de Desarrollo — 5 Fases</h2>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Timeline de Desarrollo</div>
+    <pre class="mermaid">
+gantt
+    dateFormat  YYYY-MM-DD
+    title       SAIPA — Roadmap de Desarrollo
+    axisFormat  %b %Y
+
+    section Fase 0 · Spike
+    Entorno Docker + Moodle           :done, f0a, 2026-03-17, 1w
+    Esqueleto plugins PHP             :      f0b, after f0a, 1w
+
+    section Fase 1 · MVP
+    Widget chat + Web Services        :f1a, after f0b, 2w
+    RAG básico (Python)               :f1b, after f0b, 2w
+    Message output WhatsApp           :f1c, after f1a, 2w
+    Panel docente básico              :f1d, after f1c, 1w
+
+    section Fase 2 · RAG Completo
+    Indexación automática cursos      :f2a, after f1d, 2w
+    Historial + feedback              :f2b, after f2a, 1w
+    Respuesta por WhatsApp            :f2c, after f2b, 1w
+
+    section Fase 3 · Analítica
+    Extracción de features            :f3a, after f2c, 2w
+    Modelo XGBoost                    :f3b, after f3a, 1w
+    Dashboard semáforo                :f3c, after f3b, 1w
+
+    section Fase 4 · Publicación
+    Tests PHPUnit + Behat             :f4a, after f3c, 2w
+    Moodle Plugin Directory           :f4b, after f4a, 2w
+    </pre>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num">0</div>
+      <div><h3>Spike Técnico</h3><p style="color:#e8c49a;font-size:9.5pt;margin:0">Probar conectividad end-to-end antes de construir</p></div>
+      <span class="phase-time">2 semanas</span>
+    </div>
+    <div class="phase-body">
+      <ul>
+        <li>Levantar Moodle 4.4 + PostgreSQL en Docker local</li>
+        <li>Crear esqueleto mínimo de <code>local_saipa</code> (version.php + settings.php)</li>
+        <li>Crear <code>saipa_bridge.py</code> (FastAPI, puerto 8052)</li>
+        <li>Configurar cuenta Twilio o Meta Cloud API sandbox</li>
+        <li>Enviar primer mensaje WhatsApp desde Moodle vía Python bridge</li>
+        <li>Leer calificaciones de un curso de prueba desde el bridge</li>
+      </ul>
+      <div class="callout green" style="margin-top:12px"><strong>Entregable:</strong> Botón en Moodle → "Hola {nombre}" llega por WhatsApp en &lt;3 segundos.</div>
+    </div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num">1</div>
+      <div><h3>MVP — Chat + Mensajería Básica</h3><p style="color:#e8c49a;font-size:9.5pt;margin:0">Plugin instalable con chat funcional</p></div>
+      <span class="phase-time">4 semanas</span>
+    </div>
+    <div class="phase-body">
+      <ul>
+        <li><code>block_saipa</code>: widget de chat (Mustache + AMD JS + AJAX)</li>
+        <li><code>local_saipa</code>: web services para recibir/enviar mensajes del widget</li>
+        <li><code>message_output_saipa</code>: canal WhatsApp en notificaciones Moodle</li>
+        <li>Panel docente básico: tabla de estudiantes + botón "Enviar recordatorio"</li>
+        <li>Verificación de número celular (OTP por WhatsApp)</li>
+        <li>Privacy API completa (todas las tablas declaradas)</li>
+        <li>RAG básico en Python: indexa descripción del curso + actividades + fechas</li>
+      </ul>
+      <div class="callout green" style="margin-top:12px"><strong>Entregable:</strong> Plugin .zip instalable con chat funcional y mensajería WhatsApp manual.</div>
+    </div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num">2</div>
+      <div><h3>Asistente RAG Completo</h3><p style="color:#e8c49a;font-size:9.5pt;margin:0">Precisión ≥80% respondiendo preguntas del curso</p></div>
+      <span class="phase-time">4 semanas</span>
+    </div>
+    <div class="phase-body">
+      <ul>
+        <li>Scheduled task: re-indexa ChromaDB cuando se modifica contenido del curso</li>
+        <li>Observer de eventos: <code>\core\event\course_module_updated</code> → adhoc task</li>
+        <li>Historial de conversación persistente en DB</li>
+        <li>Contexto por rol: respuestas distintas para estudiante vs docente</li>
+        <li>Indexación de recursos: PDFs, páginas, foros, asignaciones</li>
+        <li>Panel docente: visor de conversaciones por estudiante</li>
+        <li>Feedback 👍/👎 por respuesta (futura base para fine-tuning)</li>
+        <li>Webhook para responder consultas por WhatsApp (no solo chat web)</li>
+      </ul>
+      <div class="callout green" style="margin-top:12px"><strong>Entregable:</strong> "¿Cuándo vence el TP2?" → respuesta con fecha exacta del curso.</div>
+    </div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num">3</div>
+      <div><h3>Analítica Predictiva</h3><p style="color:#e8c49a;font-size:9.5pt;margin:0">Detectar estudiantes en riesgo y alertar automáticamente</p></div>
+      <span class="phase-time">4 semanas</span>
+    </div>
+    <div class="phase-body">
+      <ul>
+        <li>Extracción de features: días sin acceso, % actividades completadas, notas, foros, puntualidad</li>
+        <li>Modelo XGBoost entrenado con datos históricos de Moodle</li>
+        <li>Scheduled task diario: evalúa riesgo de cada estudiante activo</li>
+        <li>Panel docente: semáforo ROJO/AMARILLO/VERDE con factores explicativos</li>
+        <li>Alerta WhatsApp automática cuando riesgo = ALTO (con control on/off por docente)</li>
+        <li>"Vista de calor de la clase": engagement global del curso</li>
+      </ul>
+      <div class="callout green" style="margin-top:12px"><strong>Entregable:</strong> Dashboard con semáforo de riesgo + alertas WhatsApp automáticas proactivas.</div>
+    </div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num">4</div>
+      <div><h3>Personalización y Publicación</h3><p style="color:#e8c49a;font-size:9.5pt;margin:0">Plugin listo para Moodle Plugin Directory</p></div>
+      <span class="phase-time">4 semanas</span>
+    </div>
+    <div class="phase-body">
+      <ul>
+        <li>Resúmenes semanales automáticos de progreso (LLM genera texto personalizado)</li>
+        <li>Generación de borradores de rúbricas para docentes</li>
+        <li>Soporte multiidioma: es, en, pt</li>
+        <li>Tests PHPUnit completos para todas las clases</li>
+        <li>Tests Behat para flujos principales (chat, alerta, panel docente)</li>
+        <li>README.md + CHANGELOG.md + LICENSE</li>
+        <li>Verificación PHPCS completa (moodle coding standard)</li>
+        <li>Empaquetado y envío al Plugin Directory (MATURITY_STABLE)</li>
+      </ul>
+      <div class="callout green" style="margin-top:12px"><strong>Entregable:</strong> Plugin publicado en moodle.org/plugins.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 7 — COMERCIALIZACIÓN
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">7. Modelo de Comercialización</h2>
+
+  <h3>7.1 El Modelo Dual: GPL + Propietario</h3>
+
+  <p>Moodle es GPL v3. Todo plugin que se integre y distribuya hereda esa licencia. Sin embargo, SAIPA tiene una arquitectura de dos componentes con naturaleza legal distinta, lo que habilita un modelo comercial sólido:</p>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Naturaleza legal de cada componente</div>
+    <pre class="mermaid">
+graph LR
+    subgraph GPL["GPL v3 — Libre (plugin PHP)"]
+        A["block_saipa\nlocal_saipa\nmessage_output_saipa\n\n→ El cliente puede tenerlo\n→ Pero es inútil sin el motor"]
+    end
+
+    subgraph COM["Licencia Comercial — Propietario"]
+        B["saipa-engine\n(Python backend)\n\nRAG · Analítica · WhatsApp\n\n→ ESTE ES EL PRODUCTO\n→ Sin licencia válida → no funciona"]
+    end
+
+    A -->|"se conecta vía HTTP\n(requiere licencia activa)"| B
+
+    style GPL fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style COM fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    </pre>
+  </div>
+
+  <div class="callout green">
+    <strong>Analogía:</strong> El plugin PHP es el control remoto (libre, disponible). El backend Python es el televisor (propietario, se licencia). Uno sin el otro no hace nada útil.
+  </div>
+
+  <h3>7.2 Tres Modelos de Venta</h3>
+
+  <table>
+    <tr><th>Modelo</th><th>Descripción</th><th>Ventaja</th><th>Desventaja</th><th>Precio típico</th></tr>
+    <tr>
+      <td><strong>A — SaaS</strong></td>
+      <td>El backend Python corre en servidores de S&amp;P. La universidad se conecta via API.</td>
+      <td>Máxima protección del código. Ingresos recurrentes.</td>
+      <td>Muchas universidades exigen que sus datos no salgan de su red.</td>
+      <td>USD 200–500/mes</td>
+    </tr>
+    <tr style="background:#f0fff0">
+      <td><strong>B — On-Premise ✅</strong></td>
+      <td>El backend corre en el servidor de la universidad. Licencia anual con validación online.</td>
+      <td>Resuelve la objeción de soberanía de datos. Los datos nunca salen de la institución.</td>
+      <td>Requiere que el cliente instale Docker. Soporte técnico más complejo.</td>
+      <td>USD 1.500–3.000/año + USD 2.000–5.000 fee inicial</td>
+    </tr>
+    <tr>
+      <td><strong>C — Gestionado</strong></td>
+      <td>S&amp;P instala y mantiene todo en los servidores de la universidad. Contrato de servicio.</td>
+      <td>Máximo valor percibido. Relación más profunda con el cliente.</td>
+      <td>Mayor carga operativa para S&amp;P.</td>
+      <td>USD 3.500–8.000/año (todo incluido)</td>
+    </tr>
+  </table>
+
+  <p><strong>Modelo recomendado: B (On-Premise con Licencia)</strong> — resuelve la principal objeción de universidades latinoamericanas (soberanía de datos) y genera ingresos recurrentes anuales predecibles.</p>
+
+  <h3>7.3 Flujo Completo: del Directorio a la Venta</h3>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Journey del cliente — desde el descubrimiento hasta el pago</div>
+    <pre class="mermaid">
+flowchart TD
+    A["🔍 Universidad busca solución\nen moodle.org/plugins"] --> B["📥 Descarga e instala\nel plugin PHP gratis\n(su técnico, sin S&P)"]
+    B --> C{"Plugin muestra:\n'Motor IA no configurado.\nContactar a Schaller & Ponce'"}
+    C --> D["📞 Universidad contacta a S&P\n← Lead calificado y motivado"]
+    D --> E["🎥 Demo técnica por Zoom\n(30-45 minutos)"]
+    E --> F["📄 Propuesta económica\nFee implementación + Licencia anual"]
+    F --> G{"¿Acepta?"}
+    G -->|No| H["Seguimiento comercial\nObjecciones / ajuste de propuesta"]
+    H --> G
+    G -->|Sí| I["✍️ Firma contrato\nde licencia"]
+    I --> J["💳 Cobro del fee inicial\n+ primer año de licencia"]
+    J --> K["🔑 S&P genera clave de licencia\nvinculada al dominio Moodle del cliente"]
+    K --> L["📦 S&P entrega:\n- saipa-engine.tar.gz\n- Manual de instalación\n- Clave de licencia"]
+    L --> M["🔧 Técnico del cliente instala\nel backend con Docker\n(~20 minutos)"]
+    M --> N["⚙️ Técnico ingresa URL del bridge\ny clave en el panel Moodle"]
+    N --> O["✅ SAIPA operativo\nEstudiantes y docentes activos"]
+    O --> P["📅 Renovación anual de licencia\n← INGRESO RECURRENTE"]
+
+    style D fill:#fff9c4,stroke:#f9a825
+    style J fill:#c8e6c9,stroke:#2e7d32
+    style O fill:#c8e6c9,stroke:#2e7d32
+    style P fill:#c8e6c9,stroke:#2e7d32
+    </pre>
+  </div>
+
+  <h3>7.4 Mecanismo de Activación (Puerta de Licencia)</h3>
+
+  <p>El backend Python valida la licencia al iniciar. Sin clave válida, retorna <code>HTTP 402 Payment Required</code> en todas las peticiones. El plugin Moodle muestra la pantalla de "Motor no configurado".</p>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Validación de licencia on-premise</div>
+    <pre class="mermaid">
+sequenceDiagram
+    participant M as Servidor universidad
+    participant B as saipa-engine (Python)
+    participant L as api.schaller-ponce.com.ar
+
+    M->>B: docker compose up
+    B->>L: POST /validate-license { key, domain, version }
+    L-->>B: { valid: true, expiry: "2027-03-16", features: [...] }
+    B->>B: Inicia servicios RAG, analytics, WhatsApp
+    B-->>M: Servicio disponible en :8052
+
+    Note over M,L: Revalidación automática cada 24hs
+    Note over B: Fallback offline: 30 días si no hay conexión
+    </pre>
+  </div>
+
+  <h3>7.5 Estructura de Precios Recomendada</h3>
+
+  <div class="price-box">
+    <h4>Modelo On-Premise — Precio por institución (ARS o USD)</h4>
+    <div class="price-row">
+      <span class="price-label">Fee de implementación (único)</span>
+      <span class="price-value">USD 2.000 – 5.000</span>
+    </div>
+    <div class="price-row">
+      <span class="price-label">Licencia anual saipa-engine</span>
+      <span class="price-value">USD 1.500 – 3.000 / año</span>
+    </div>
+    <div class="price-row">
+      <span class="price-label">Soporte premium (SLA 24hs)</span>
+      <span class="price-value">USD 500 / año (opcional)</span>
+    </div>
+    <div class="price-row">
+      <span class="price-label">Jornada de capacitación docente</span>
+      <span class="price-value">USD 800 – 1.500 (opcional)</span>
+    </div>
+    <div class="price-row">
+      <span class="price-label">💰 Ingreso total año 1 (cliente típico)</span>
+      <span class="price-value">USD 3.500 – 8.000</span>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Escala de clientes</th><th>Ingreso anual estimado (renovaciones)</th></tr>
+    <tr><td>5 universidades</td><td>USD 7.500 – 15.000 / año</td></tr>
+    <tr><td>10 universidades</td><td>USD 15.000 – 30.000 / año</td></tr>
+    <tr><td>20 universidades</td><td>USD 30.000 – 60.000 / año</td></tr>
+  </table>
+
+  <div class="callout green">
+    <strong>El plugin en el directorio de Moodle funciona como un vendedor automático 24/7.</strong> Cada descarga es un lead calificado que ya tomó la decisión de usar SAIPA. S&P solo interviene cuando el dinero ya está casi sobre la mesa.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECCIÓN 8 — DECISIONES
+══════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <h2 class="section-title">8. Decisiones Tomadas y Pendientes</h2>
+
+  <h3>Decisiones Confirmadas</h3>
+
+  <table>
+    <tr><th>#</th><th>Decisión</th><th>Opción Elegida</th><th>Justificación</th></tr>
+    <tr>
+      <td>1</td>
+      <td>Modelo de distribución</td>
+      <td><strong>3 plugins separados</strong> (local + block + message_output)</td>
+      <td>Más profesional, publicable en directorio, permite desactivar WhatsApp independientemente</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Versión Moodle mínima</td>
+      <td><strong>Moodle 4.4 (PHP 8.2)</strong></td>
+      <td>APIs modernas, PHP 8.2 obligatorio en 5.0, desarrollo más limpio. Declarar soporte hasta 5.0.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Modelo comercial</td>
+      <td><strong>On-premise con licencia anual (Modelo B)</strong></td>
+      <td>Resuelve objeción de soberanía de datos en universidades latinoamericanas</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>LLM</td>
+      <td><strong>Qwen 2.5 14B vía Ollama</strong></td>
+      <td>Ya disponible en el servidor (UCTP-IA), probado, privado, 16k contexto</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>Vector store (MVP)</td>
+      <td><strong>ChromaDB</strong></td>
+      <td>Simple, embebido, sin infraestructura extra. Migrar a pgvector en Fase 4.</td>
+    </tr>
+  </table>
+
+  <h3>Decisiones Pendientes</h3>
+
+  <table>
+    <tr><th>#</th><th>Decisión</th><th>Opciones</th><th>Estado</th></tr>
+    <tr>
+      <td>1</td>
+      <td>Proveedor WhatsApp para Fase 0</td>
+      <td>Twilio (inmediato, pago) vs Meta Cloud API (gratis, 2-6 sem verificación)</td>
+      <td>⏳ Verificar si existe cuenta Twilio preexistente</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Repositorio Git</td>
+      <td>GitHub público (visibilidad) vs privado (reservado hasta publicación)</td>
+      <td>⏳ Pendiente decisión de Carlos</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Nombre del paquete en directorio</td>
+      <td>"SAIPA" vs nombre en inglés para mercado internacional</td>
+      <td>⏳ Pendiente — considerar "SmartCompanion for Moodle"</td>
+    </tr>
+  </table>
+
+  <h2 class="section-title" style="margin-top:32px">9. Próximos Pasos — Fase 0</h2>
+
+  <table>
+    <tr><th>#</th><th>Tarea</th><th>Quién</th><th>Tiempo estimado</th></tr>
+    <tr><td>1</td><td>Verificar existencia de cuenta Twilio</td><td>Carlos</td><td>1 hora</td></tr>
+    <tr><td>2</td><td>Decidir repositorio Git (público o privado)</td><td>Carlos</td><td>—</td></tr>
+    <tr><td>3</td><td>Crear <code>docker-compose.yml</code> con Moodle 4.4 + PostgreSQL</td><td>Claude</td><td>1 hora</td></tr>
+    <tr><td>4</td><td>Crear esqueleto de los 3 plugins PHP (archivos mínimos)</td><td>Claude</td><td>2 horas</td></tr>
+    <tr><td>5</td><td>Crear <code>saipa_bridge.py</code> (FastAPI base, puerto 8052)</td><td>Claude</td><td>1 hora</td></tr>
+    <tr><td>6</td><td>Configurar Twilio sandbox para WhatsApp</td><td>Carlos + Claude</td><td>30 min</td></tr>
+    <tr><td>7</td><td>Enviar primer mensaje WhatsApp desde Moodle (hito Fase 0)</td><td>Claude</td><td>2 horas</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Hito de Fase 0:</strong> Un botón en el panel admin de Moodle que, al hacer clic, envía "Hola {nombre del docente}, SAIPA está conectado correctamente." por WhatsApp al número del administrador. Tiempo estimado desde inicio: <strong>2 semanas a tiempo parcial</strong>.
+  </div>
+
+  <div class="doc-footer">
+    <span>SAIPA — Documento Técnico y Comercial v1.0</span>
+    <span>Schaller &amp; Ponce Consultores · 2026</span>
+    <span>Confidencial — Uso interno</span>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#fdf0e0',
+      primaryTextColor: '#2A1005',
+      primaryBorderColor: '#e8a060',
+      lineColor: '#3A1A08',
+      secondaryColor: '#e8f5e9',
+      tertiaryColor: '#e8f0fe',
+      background: '#ffffff',
+      mainBkg: '#fdf0e0',
+      nodeBorder: '#e8a060',
+      clusterBkg: '#fdf8f3',
+      titleColor: '#2A1005',
+      edgeLabelBackground: '#fdf8f3',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { mirrorActors: false }
+  });
+</script>
+</body>
+</html>
