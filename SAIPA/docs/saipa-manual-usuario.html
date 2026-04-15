@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAIPA — Manual de Usuario v0.5.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  /* ---- Page setup ---- */
+  @page { size: A4; margin: 25mm 10mm 25mm 20mm; }
+  @media print {
+    .page-break  { page-break-before: always; }
+    nav, .no-print { display: none; }
+    body         { padding: 0; max-width: none; }
+    .table-wrapper { overflow-x: visible; }
+    pre            { overflow-x: visible; white-space: pre-wrap; word-break: break-all; }
+    table.std      { font-size: 8.5pt; }
+    table.std th   { font-size: 8pt; }
+    table.std, figure, .mermaid, .callout, ol.steps li, pre {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1.section-h1, h2.section-h2, h3.section-h3, h4.section-h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+  }
+
+  :root {
+    --blue:   #1a3a6b;
+    --blue2:  #2557a7;
+    --teal:   #0d7377;
+    --gray1:  #f4f6fb;
+    --gray2:  #e8ecf4;
+    --gray3:  #b0bacf;
+    --black:  #1a1a2e;
+    --text:   #2c2c3e;
+    --warn:   #8b3a00;
+    --warn-bg:#fff4e6;
+    --note:   #003366;
+    --note-bg:#eaf2ff;
+    --ok:     #1a5c28;
+    --ok-bg:  #edfff2;
+    --risk-low:   #16a34a;
+    --risk-med:   #ca8a04;
+    --risk-high:  #dc2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: var(--text);
+    background: #fff;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 0 10mm;
+  }
+
+  /* ---- Cover ---- */
+  #cover {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    min-height: 96vh; text-align: center;
+    border-bottom: 4px solid var(--blue);
+    padding: 20mm 0 15mm;
+  }
+  #cover .logo-box {
+    width: 90px; height: 90px;
+    background: var(--blue); border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(26,58,107,.25);
+  }
+  #cover .logo-box span { color: #fff; font-size: 32pt; font-weight: 900; letter-spacing: -2px; }
+  #cover h1 { font-size: 28pt; color: var(--blue); line-height: 1.15; margin-bottom: 6px; }
+  #cover h2 { font-size: 15pt; color: var(--teal); font-weight: 400; margin-bottom: 30px; }
+  #cover .tag {
+    display: inline-block;
+    background: var(--gray2); color: var(--blue);
+    padding: 4px 14px; border-radius: 20px;
+    font-size: 9pt; font-weight: 600; letter-spacing: .5px;
+    margin-bottom: 40px;
+  }
+  #cover table.meta { border-collapse: collapse; width: 320px; font-size: 9.5pt; }
+  #cover table.meta td { padding: 4px 10px; border-bottom: 1px solid var(--gray2); }
+  #cover table.meta td:first-child { color: var(--gray3); font-weight: 600; text-align: right; }
+  #cover .footer-note { margin-top: auto; padding-top: 30px; font-size: 8.5pt; color: var(--gray3); }
+
+  /* ---- Headings ---- */
+  h1, h2, h3, h4, h5 { color: var(--blue); font-weight: 700; }
+  h1.section-h1 { font-size: 17pt; border-bottom: 3px solid var(--blue2); padding-bottom: 6px; margin: 30px 0 14px; }
+  h2.section-h2 { font-size: 13pt; border-left: 4px solid var(--teal); padding-left: 10px; margin: 22px 0 10px; }
+  h3.section-h3 { font-size: 11pt; margin: 16px 0 8px; color: var(--blue2); }
+  h4.section-h4 { font-size: 10.5pt; margin: 12px 0 6px; color: var(--teal); }
+
+  /* ---- ToC ---- */
+  #toc h1 { font-size: 17pt; border-bottom: 3px solid var(--blue2); padding-bottom: 6px; margin-bottom: 16px; }
+  #toc ol { list-style: none; padding: 0; counter-reset: toc-top; }
+  #toc > ol > li { counter-increment: toc-top; margin-bottom: 2px; }
+  #toc > ol > li::before { content: counter(toc-top) ". "; font-weight: 700; color: var(--blue); margin-right: 4px; }
+  #toc ol ol { padding-left: 22px; counter-reset: toc-sub; }
+  #toc ol ol li { counter-increment: toc-sub; }
+  #toc ol ol li::before { content: counter(toc-top) "." counter(toc-sub) ". "; font-weight: 400; color: var(--blue2); margin-right: 4px; }
+  #toc a { color: var(--text); text-decoration: none; }
+  #toc a:hover { text-decoration: underline; color: var(--blue2); }
+  #toc li { font-size: 10pt; padding: 2px 0; }
+  #toc > ol > li { font-size: 10.5pt; font-weight: 600; }
+
+  /* ---- Figures / Tables lists ---- */
+  .list-of { margin-bottom: 10px; }
+  .list-of h1 { font-size: 14pt; border-bottom: 2px solid var(--gray2); padding-bottom: 4px; margin-bottom: 10px; }
+  .list-of ol { list-style: none; padding: 0; }
+  .list-of li { font-size: 9.5pt; padding: 2px 0; display: flex; gap: 6px; }
+  .list-of li .label { color: var(--blue2); font-weight: 600; white-space: nowrap; }
+  .list-of li .dots { flex: 1; border-bottom: 1px dotted var(--gray3); margin-bottom: 3px; }
+
+  /* ---- Callouts ---- */
+  .callout { border-left: 4px solid; border-radius: 4px; padding: 10px 14px; margin: 14px 0; font-size: 9.5pt; }
+  .callout.note   { border-color: var(--blue2); background: var(--note-bg); color: var(--note); }
+  .callout.warn   { border-color: #d97706;      background: var(--warn-bg); color: var(--warn); }
+  .callout.ok     { border-color: #16a34a;      background: var(--ok-bg);   color: var(--ok); }
+  .callout.tip    { border-color: var(--teal);  background: #e6fffb;        color: #0f4c4e; }
+  .callout strong { font-weight: 700; text-transform: uppercase; font-size: 8.5pt; letter-spacing: .5px; margin-right: 4px; }
+
+  /* ---- Code ---- */
+  pre, code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    background: var(--gray1);
+    border: 1px solid var(--gray2);
+    border-radius: 4px;
+  }
+  code { padding: 1px 5px; }
+  pre { padding: 12px 14px; overflow-x: auto; margin: 10px 0; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+
+  /* ---- Figures / tables ---- */
+  figure { margin: 16px 0; }
+  figure figcaption { font-size: 9pt; color: var(--blue); font-style: italic; text-align: center; margin-top: 6px; }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--gray2); border-radius: 4px; }
+  figure.diagram figcaption { margin-top: 8px; }
+  .table-wrapper { overflow-x: auto; margin: 10px 0; }
+  table.std { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  table.std th { background: var(--blue); color: #fff; padding: 7px 10px; text-align: left; font-size: 9pt; }
+  table.std td { padding: 6px 10px; border-bottom: 1px solid var(--gray2); vertical-align: top; }
+  table.std tr:nth-child(even) td { background: var(--gray1); }
+
+  /* ---- Steps ---- */
+  ol.steps { list-style: none; counter-reset: step; padding: 0; }
+  ol.steps li { counter-increment: step; padding: 6px 0 6px 40px; position: relative; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 6px;
+    width: 26px; height: 26px;
+    background: var(--blue2); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 9pt; font-weight: 700;
+  }
+
+  /* ---- Diagrams ---- */
+  .mermaid { background: var(--gray1); border: 1px solid var(--gray2); border-radius: 6px; padding: 16px; text-align: center; margin: 10px 0; }
+
+  /* ---- Risk badges inline ---- */
+  .risk-badge {
+    display: inline-block;
+    font-size: 9pt; font-weight: 700;
+    padding: 2px 10px; border-radius: 12px;
+    color: #fff; letter-spacing: .3px;
+  }
+  .risk-badge.low  { background: var(--risk-low); }
+  .risk-badge.med  { background: var(--risk-med); }
+  .risk-badge.high { background: var(--risk-high); }
+
+  /* ---- Role card ---- */
+  .role-card {
+    border: 1px solid var(--gray2);
+    border-left: 5px solid var(--teal);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    background: var(--gray1);
+  }
+  .role-card h4 { margin-top: 0; color: var(--teal); }
+  .role-card p { margin-bottom: 4px; }
+
+  hr.section-rule { border: none; border-top: 2px solid var(--gray2); margin: 30px 0; }
+  p { margin-bottom: 8px; }
+  ul, ol { padding-left: 22px; margin-bottom: 8px; }
+  li { margin-bottom: 3px; }
+  a { color: var(--blue2); }
+  kbd {
+    background: #fff; border: 1px solid var(--gray3);
+    border-bottom-width: 2px; border-radius: 3px;
+    padding: 1px 5px; font-size: 9pt;
+    font-family: monospace; color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ PORTADA -->
+<section id="cover">
+  <div class="logo-box"><span>S</span></div>
+  <h1>SAIPA</h1>
+  <h2>Sistema de Asistencia Inteligente y Prevención del Abandono</h2>
+  <span class="tag">MANUAL DE USUARIO — v0.5.0</span>
+
+  <table class="meta">
+    <tr><td>Versión</td><td><strong>0.5.0</strong> (build 2026032403)</td></tr>
+    <tr><td>Fecha</td><td>Abril 2026</td></tr>
+    <tr><td>Autores</td><td>Schaller &amp; Ponce</td></tr>
+    <tr><td>Contacto</td><td>dev@schaller-ponce.com.ar</td></tr>
+    <tr><td>Audiencia</td><td>Docentes, estudiantes, asesores y administradores</td></tr>
+  </table>
+
+  <p class="footer-note">
+    Documento complementario del <em>Manual de Instalación SAIPA v0.5.0</em>.<br>
+    Schaller &amp; Ponce — Soluciones Educativas con Inteligencia Artificial
+  </p>
+</section>
+
+<!-- ============================================================ TOC -->
+<div class="page-break"></div>
+<section id="toc">
+  <h1>Tabla de Contenidos</h1>
+  <ol>
+    <li><a href="#s1">Introducción</a>
+      <ol>
+        <li><a href="#s1-1">¿Qué es SAIPA?</a></li>
+        <li><a href="#s1-2">Roles y qué hace cada uno con SAIPA</a></li>
+        <li><a href="#s1-3">Qué aprenderá en este manual</a></li>
+        <li><a href="#s1-4">Convenciones del documento</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Primeros pasos</a>
+      <ol>
+        <li><a href="#s2-1">Acceso a Moodle y ubicación de SAIPA</a></li>
+        <li><a href="#s2-2">El bloque SAIPA en el curso</a></li>
+        <li><a href="#s2-3">Vinculación con Telegram</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Guía del docente</a>
+      <ol>
+        <li><a href="#s3-1">El panel docente paso a paso</a></li>
+        <li><a href="#s3-2">Badges de riesgo de abandono</a></li>
+        <li><a href="#s3-3">Enviar alertas proactivas a los alumnos</a></li>
+        <li><a href="#s3-4">Historial de conversaciones del curso</a></li>
+        <li><a href="#s3-5">Vista multi-curso — Mis cursos</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Guía del estudiante</a>
+      <ol>
+        <li><a href="#s4-1">Usar el chat SAIPA dentro del aula</a></li>
+        <li><a href="#s4-2">Recibir y responder alertas por Telegram</a></li>
+        <li><a href="#s4-3">Dar feedback sobre las respuestas de SAIPA</a></li>
+        <li><a href="#s4-4">Qué datos ve SAIPA de mí</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Guía del asesor académico</a>
+      <ol>
+        <li><a href="#s5-1">Ingresar al panel del asesor</a></li>
+        <li><a href="#s5-2">Resumen institucional</a></li>
+        <li><a href="#s5-3">Dashboard de riesgo</a></li>
+        <li><a href="#s5-4">Estadísticas de engagement</a></li>
+        <li><a href="#s5-5">Configuración por curso</a></li>
+        <li><a href="#s5-6">Asistente SAIPA (chat del asesor)</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Guía del administrador (uso diario)</a>
+      <ol>
+        <li><a href="#s6-1">Indexación de cursos</a></li>
+        <li><a href="#s6-2">Monitoreo de estado</a></li>
+        <li><a href="#s6-3">Gestión de vinculaciones Telegram</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Preguntas frecuentes</a></li>
+    <li><a href="#s8">Glosario</a></li>
+  </ol>
+</section>
+
+<!-- ============================================================ LISTA FIGURAS -->
+<div class="page-break"></div>
+<section class="list-of">
+  <h1>Lista de Figuras</h1>
+  <ol>
+    <li><span class="label">Figura 1.</span><span class="dots"></span><span>Panel docente de SAIPA</span></li>
+    <li><span class="label">Figura 2.</span><span class="dots"></span><span>Chat RAG del estudiante en el bloque del curso</span></li>
+    <li><span class="label">Figura 3.</span><span class="dots"></span><span>Alerta proactiva recibida por Telegram</span></li>
+    <li><span class="label">Figura 4.</span><span class="dots"></span><span>Dashboard del asesor académico — resumen institucional</span></li>
+    <li><span class="label">Figura 5.</span><span class="dots"></span><span>Estadísticas de engagement por curso</span></li>
+    <li><span class="label">Figura 6.</span><span class="dots"></span><span>Vista multi-curso del docente</span></li>
+    <li><span class="label">Figura 7.</span><span class="dots"></span><span>Asistente SAIPA como FAB flotante</span></li>
+    <li><span class="label">Figura 8.</span><span class="dots"></span><span>Flujo completo docente → alumno</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ SECCIÓN 1: INTRODUCCIÓN -->
+<div class="page-break"></div>
+<section id="s1">
+  <h1 class="section-h1">1. Introducción</h1>
+
+  <h2 class="section-h2" id="s1-1">1.1 ¿Qué es SAIPA?</h2>
+  <p>
+    <strong>SAIPA</strong> (Sistema de Asistencia Inteligente y Prevención del Abandono) es un
+    plugin para Moodle que integra inteligencia artificial al acompañamiento pedagógico diario.
+    Hace tres cosas que, combinadas, ayudan a que menos alumnos abandonen un curso:
+  </p>
+  <ol>
+    <li><strong>Responde dudas de los alumnos</strong> sobre el material del curso, usando solo la bibliografía que el docente indexó (no Wikipedia, no la web abierta). Es un asistente que "sabe" del curso.</li>
+    <li><strong>Detecta señales de abandono</strong> analizando la actividad de cada alumno en Moodle (accesos, entregas, participación) y la clasifica en tres niveles: <span class="risk-badge low">BAJO</span> <span class="risk-badge med">MEDIO</span> <span class="risk-badge high">ALTO</span>.</li>
+    <li><strong>Envía alertas proactivas</strong> al Telegram del alumno cuando el docente (o el sistema) detecta que necesita atención, y permite una conversación bidireccional desde el mismo chat.</li>
+  </ol>
+
+  <div class="callout tip">
+    <strong>EN UNA FRASE</strong>
+    SAIPA hace que el docente pueda dedicar tiempo a los alumnos que más lo necesitan,
+    sin tener que revisar manualmente 60 planillas para encontrarlos.
+  </div>
+
+  <h2 class="section-h2" id="s1-2">1.2 Roles y qué hace cada uno con SAIPA</h2>
+
+  <div class="role-card">
+    <h4>👩‍🏫 Docente (editingteacher)</h4>
+    <p>Indexa el material del curso, revisa el panel de riesgo de sus alumnos, envía alertas personalizadas y consulta el historial de conversaciones del aula.</p>
+  </div>
+
+  <div class="role-card">
+    <h4>🎓 Estudiante</h4>
+    <p>Hace preguntas al asistente desde el bloque del curso, recibe alertas por Telegram cuando su docente lo considera necesario, y puede responderlas desde el mismo Telegram.</p>
+  </div>
+
+  <div class="role-card">
+    <h4>🧭 Asesor académico (manager)</h4>
+    <p>Ve el panorama institucional completo: alumnos en riesgo cruzando todos los cursos, tendencias de engagement, configuración global. Tiene su propio asistente IA para preguntas sobre los datos.</p>
+  </div>
+
+  <div class="role-card">
+    <h4>🛠️ Administrador (site admin)</h4>
+    <p>Gestiona la indexación masiva de cursos, monitorea el estado del motor de IA, revisa vinculaciones Telegram y configura políticas a nivel sitio.</p>
+  </div>
+
+  <h2 class="section-h2" id="s1-3">1.3 Qué aprenderá en este manual</h2>
+  <p>
+    Este manual está organizado por rol. No necesita leerlo de punta a punta: salte directamente
+    a la sección que le corresponde según su perfil. Los docentes encontrarán en §3 todo lo que
+    necesitan para el día a día; los estudiantes en §4; asesores en §5; administradores en §6.
+  </p>
+  <p>
+    Las secciones §1 y §2 son comunes a todos. Las preguntas frecuentes (§7) y el glosario (§8)
+    son referencia rápida.
+  </p>
+
+  <div class="callout note">
+    <strong>INSTALACIÓN</strong>
+    Este manual asume que SAIPA ya está instalado y configurado en su Moodle. Si es el
+    administrador que necesita instalarlo por primera vez, consulte el
+    <em>Manual de Instalación SAIPA v0.5.0</em>.
+  </div>
+
+  <h2 class="section-h2" id="s1-4">1.4 Convenciones del documento</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead><tr><th style="width:25%;">Elemento</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>Botón</kbd></td><td>Tecla o botón a pulsar en la interfaz.</td></tr>
+        <tr><td><em>Menú → Submenú</em></td><td>Ruta de navegación dentro de Moodle.</td></tr>
+        <tr><td><span class="risk-badge low">BAJO</span> <span class="risk-badge med">MEDIO</span> <span class="risk-badge high">ALTO</span></td><td>Niveles de riesgo de abandono.</td></tr>
+        <tr><td>💡 Tip</td><td>Consejo no crítico pero útil.</td></tr>
+        <tr><td>⚠ Advertencia</td><td>Situación a evitar o requisito importante.</td></tr>
+        <tr><td>✓ OK</td><td>Resultado esperado de una acción correcta.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 2: PRIMEROS PASOS -->
+<div class="page-break"></div>
+<section id="s2">
+  <h1 class="section-h1">2. Primeros pasos</h1>
+
+  <h2 class="section-h2" id="s2-1">2.1 Acceso a Moodle y ubicación de SAIPA</h2>
+  <p>
+    SAIPA vive dentro de Moodle. Ingrese con su usuario habitual (<code>https://su-moodle.edu</code>
+    o el dominio que haya configurado su institución). No hay una URL separada: todo lo que verá
+    está integrado en las páginas que ya conoce.
+  </p>
+  <p>
+    Según su rol, SAIPA se manifiesta de tres maneras diferentes:
+  </p>
+  <ul>
+    <li><strong>En cada curso</strong>, como un bloque lateral con el chat del asistente (alumnos y docentes).</li>
+    <li><strong>Como páginas dedicadas</strong> bajo <code>/local/saipa/</code>: panel docente, vista multi-curso, dashboard del asesor.</li>
+    <li><strong>En Telegram</strong>, como un bot con el que los alumnos conversan (previa vinculación).</li>
+  </ul>
+
+  <h2 class="section-h2" id="s2-2">2.2 El bloque SAIPA en el curso</h2>
+  <p>
+    El bloque SAIPA debe estar agregado a cada curso donde se quiera usar el asistente. Si es
+    docente del curso y no lo ve, actívelo así:
+  </p>
+  <ol class="steps">
+    <li>Ingrese al curso como docente.</li>
+    <li>Active el modo edición con el botón <kbd>Edit mode</kbd> (esquina superior derecha).</li>
+    <li>En la columna lateral, haga clic en <em>Add a block</em>.</li>
+    <li>Elija <strong>SAIPA</strong> de la lista. El bloque aparece inmediatamente.</li>
+    <li>Desactive el modo edición.</li>
+  </ol>
+
+  <div class="callout note">
+    <strong>NOTA</strong>
+    El bloque solo es útil si el curso está indexado. Si acaba de instalarlo, pida al
+    administrador o ejecute usted mismo la indexación desde el panel docente (§3.1).
+  </div>
+
+  <h2 class="section-h2" id="s2-3">2.3 Vinculación con Telegram (solo estudiantes)</h2>
+  <p>
+    Para recibir alertas proactivas y chatear con SAIPA desde Telegram, cada alumno debe
+    vincular su cuenta una vez. El proceso es:
+  </p>
+  <ol class="steps">
+    <li>Desde el bloque SAIPA del curso, haga clic en <kbd>Vincular Telegram</kbd>.</li>
+    <li>SAIPA muestra un código corto de verificación (ej. <code>A3F-829</code>) válido por 10 minutos.</li>
+    <li>Abra Telegram en su teléfono y busque el bot del curso (nombre provisto por su institución, ej. <code>@saipa_asistente_bot</code>).</li>
+    <li>Envíele el mensaje <code>/start</code>. El bot le pedirá el código.</li>
+    <li>Pegue el código. El bot confirma: <em>"Cuenta vinculada con éxito ✅"</em>.</li>
+  </ol>
+
+  <div class="callout ok">
+    <strong>OK</strong>
+    A partir de ese momento, cualquier alerta que le envíen llegará como un mensaje normal
+    de Telegram, y usted puede responder directamente desde el chat.
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 3: DOCENTE -->
+<div class="page-break"></div>
+<section id="s3">
+  <h1 class="section-h1">3. Guía del docente</h1>
+
+  <p>Esta es la sección más extensa del manual, porque es la que más usará el docente en su día a día.</p>
+
+  <h2 class="section-h2" id="s3-1">3.1 El panel docente paso a paso</h2>
+  <p>
+    Acceda al panel desde: <em>Curso → bloque SAIPA → botón "Panel docente"</em>, o directamente
+    en la URL:
+  </p>
+<pre><code>https://su-moodle.edu/local/saipa/teacher.php?courseid={ID}</code></pre>
+
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/01-teacher-dashboard.png" alt="Panel docente SAIPA">
+    <figcaption>Figura 1. Panel docente de SAIPA mostrando lista de alumnos con badges de riesgo.</figcaption>
+  </figure>
+
+  <p>El panel tiene cuatro áreas:</p>
+  <ol>
+    <li><strong>Barra superior de métricas</strong> — total de alumnos, % en cada nivel de riesgo, número de conversaciones de la última semana, índice de engagement.</li>
+    <li><strong>Lista de alumnos</strong> — cada fila muestra nombre, badge de riesgo, última actividad, botón de acción.</li>
+    <li><strong>Filtros</strong> — por nivel de riesgo, por fecha, por estado de indexación.</li>
+    <li><strong>Historial del curso</strong> — pestaña que muestra las conversaciones que los alumnos tuvieron con SAIPA (sin identificar por defecto — ver §3.4).</li>
+  </ol>
+
+  <h2 class="section-h2" id="s3-2">3.2 Badges de riesgo de abandono</h2>
+  <p>
+    Cada alumno tiene asignado un nivel de riesgo calculado por el motor de IA a partir de
+    11 variables de su actividad (accesos al curso, entregas a tiempo, participación en foros,
+    tendencia semanal, etc.). El cálculo se actualiza diariamente.
+  </p>
+
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Badge</th><th>Significado</th><th>Qué hacer</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="risk-badge low">BAJO</span></td>
+          <td>El alumno está participando con normalidad.</td>
+          <td>Nada. No lo interrumpa innecesariamente.</td>
+        </tr>
+        <tr>
+          <td><span class="risk-badge med">MEDIO</span></td>
+          <td>Hay señales tempranas: disminución en la frecuencia de acceso o entregas parciales.</td>
+          <td>Observe su evolución. Considere enviarle un mensaje motivador la próxima semana si no mejora.</td>
+        </tr>
+        <tr>
+          <td><span class="risk-badge high">ALTO</span></td>
+          <td>El alumno muestra patrones compatibles con abandono (ausencias prolongadas, varias entregas faltantes).</td>
+          <td>Actúe esta semana. Use §3.3 para enviarle una alerta personalizada.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <strong>IMPORTANTE</strong>
+    El badge es una <em>señal</em>, no un veredicto. Siempre es el docente quien decide si
+    intervenir o no. SAIPA jamás toma decisiones pedagógicas por usted.
+  </div>
+
+  <h2 class="section-h2" id="s3-3">3.3 Enviar alertas proactivas a los alumnos</h2>
+  <p>
+    Al hacer clic en el botón <kbd>Enviar alerta</kbd> junto a un alumno (o seleccionar varios
+    con los checkboxes y usar el botón del encabezado), SAIPA abre un diálogo con:
+  </p>
+  <ul>
+    <li><strong>Plantilla sugerida</strong> — un mensaje base que usted puede editar.</li>
+    <li><strong>Canal</strong> — Telegram (si el alumno está vinculado) o Mensajería interna de Moodle como respaldo.</li>
+    <li><strong>Vista previa</strong> del mensaje tal como lo recibirá el alumno.</li>
+  </ul>
+  <p>
+    Al confirmar, SAIPA envía el mensaje y registra la alerta. El alumno puede responder
+    directamente desde Telegram, y la conversación queda archivada en el historial del curso.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/03-telegram-alert.png" alt="Alerta Telegram">
+    <figcaption>Figura 3. Alerta proactiva recibida por el alumno en Telegram, con respuesta inline.</figcaption>
+  </figure>
+
+  <div class="callout tip">
+    <strong>TIP</strong>
+    Personalice la plantilla antes de enviar. Mensajes genéricos ("hola, ¿todo bien?") son
+    menos efectivos que referencias concretas ("vi que no entregaste el TP3, ¿necesitás una
+    prórroga?").
+  </div>
+
+  <h2 class="section-h2" id="s3-4">3.4 Historial de conversaciones del curso</h2>
+  <p>
+    En la pestaña <em>Historial</em> del panel docente puede ver todas las preguntas que los
+    alumnos le hicieron al asistente SAIPA en el curso. Por defecto el historial es
+    <strong>anónimo</strong>: verá las preguntas pero no el nombre del alumno.
+  </p>
+  <p>Este historial es útil para:</p>
+  <ul>
+    <li>Detectar temas donde muchos alumnos tienen dudas similares (y reforzar la explicación en clase).</li>
+    <li>Evaluar si el material del curso cubre bien los conceptos clave.</li>
+    <li>Marcar respuestas incorrectas del asistente (con 👎) para mejorar su exactitud.</li>
+  </ul>
+
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/02-chat-rag.png" alt="Chat RAG">
+    <figcaption>Figura 2. Chat del estudiante con SAIPA dentro del bloque del curso.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s3-5">3.5 Vista multi-curso — Mis cursos</h2>
+  <p>
+    Si es docente de varios cursos, la vista <em>Mis cursos</em> le da un resumen único de
+    todos ellos en una sola pantalla, ordenados por urgencia (los cursos con más alumnos en
+    riesgo alto aparecen primero).
+  </p>
+<pre><code>https://su-moodle.edu/local/saipa/my_courses.php</code></pre>
+
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/06-my-courses.png" alt="Mis cursos">
+    <figcaption>Figura 6. Vista multi-curso del docente con indicadores agregados.</figcaption>
+  </figure>
+
+  <p>Cada tarjeta de curso muestra:</p>
+  <ul>
+    <li>Nombre del curso y cantidad total de alumnos.</li>
+    <li>Distribución de riesgo (barra con tres segmentos).</li>
+    <li>Actividad de chat de la última semana.</li>
+    <li>Botón directo al panel docente del curso.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 4: ESTUDIANTE -->
+<div class="page-break"></div>
+<section id="s4">
+  <h1 class="section-h1">4. Guía del estudiante</h1>
+
+  <h2 class="section-h2" id="s4-1">4.1 Usar el chat SAIPA dentro del aula</h2>
+  <p>
+    Dentro de cada curso donde su docente lo haya activado, verá un bloque lateral llamado
+    <strong>SAIPA</strong> con un campo de texto para preguntas. Puede preguntarle cualquier
+    cosa sobre el material del curso:
+  </p>
+  <ul>
+    <li>"¿Qué es la integración por partes y cuándo se usa?"</li>
+    <li>"Explicame con un ejemplo el concepto de la unidad 3."</li>
+    <li>"¿Dónde aparece el tema de matrices en la bibliografía?"</li>
+  </ul>
+  <p>
+    SAIPA busca la respuesta en el material que el docente indexó (apuntes, libros, recursos)
+    y le responde citando la fuente. No "inventa": si la información no está en el curso, le
+    dirá que no la tiene.
+  </p>
+
+  <div class="callout tip">
+    <strong>TIP</strong>
+    Sea específico en sus preguntas. "Explicame la derivada" es menos útil que "explicame cómo
+    se calcula la derivada de una función compuesta, según lo que vimos en la unidad 4".
+  </div>
+
+  <h2 class="section-h2" id="s4-2">4.2 Recibir y responder alertas por Telegram</h2>
+  <p>
+    Si vinculó su Telegram (§2.3) y su docente le envía una alerta, le llegará como un
+    mensaje normal de Telegram en su conversación con el bot <code>@saipa_asistente_bot</code>
+    (o el bot específico de su institución). Puede responder directamente ahí, y la conversación
+    llegará a su docente.
+  </p>
+  <p>Desde Telegram también puede:</p>
+  <ul>
+    <li>Hacer preguntas al asistente igual que desde el aula.</li>
+    <li>Ver su estado actual ("¿cómo voy?") con un resumen automático.</li>
+    <li>Recibir recordatorios de entregas próximas (si su institución activó esa función).</li>
+  </ul>
+
+  <h2 class="section-h2" id="s4-3">4.3 Dar feedback sobre las respuestas de SAIPA</h2>
+  <p>
+    Cada respuesta del asistente tiene dos botones: 👍 si la respuesta fue útil y correcta, 👎
+    si fue confusa o incorrecta. Su feedback ayuda a que SAIPA mejore con el tiempo y alerta al
+    docente sobre respuestas problemáticas.
+  </p>
+
+  <h2 class="section-h2" id="s4-4">4.4 Qué datos ve SAIPA de mí</h2>
+  <p>SAIPA guarda:</p>
+  <ul>
+    <li>Las preguntas y respuestas del chat (asociadas a su curso, visibles al docente de ese curso).</li>
+    <li>Su estado de riesgo calculado (visible al docente y al asesor académico).</li>
+    <li>Su vinculación con Telegram (si la activó).</li>
+  </ul>
+  <p>SAIPA <strong>no</strong> guarda:</p>
+  <ul>
+    <li>Sus conversaciones con otros alumnos o docentes.</li>
+    <li>Su actividad fuera de Moodle.</li>
+    <li>Información personal que no esté ya en Moodle.</li>
+  </ul>
+  <p>
+    Puede ejercer sus derechos ARCO / GDPR en cualquier momento a través del sistema de privacidad
+    estándar de Moodle: <em>Preferences → Privacy and policies → Request user data</em>.
+  </p>
+</section>
+
+<!-- ============================================================ SECCIÓN 5: ASESOR -->
+<div class="page-break"></div>
+<section id="s5">
+  <h1 class="section-h1">5. Guía del asesor académico</h1>
+
+  <p>
+    Esta sección es para el rol <em>manager</em> o equivalente, responsable del seguimiento
+    académico a nivel institucional (no de un curso en particular).
+  </p>
+
+  <h2 class="section-h2" id="s5-1">5.1 Ingresar al panel del asesor</h2>
+<pre><code>https://su-moodle.edu/local/saipa/advisor.php</code></pre>
+  <p>
+    El panel está organizado en cinco pestañas, cada una cubriendo un aspecto distinto
+    del acompañamiento institucional.
+  </p>
+
+  <h2 class="section-h2" id="s5-2">5.2 Resumen institucional</h2>
+  <p>Es la pestaña inicial. Muestra en una sola pantalla:</p>
+  <ul>
+    <li>Total de estudiantes activos en la institución.</li>
+    <li>Distribución global de riesgo (% bajo/medio/alto).</li>
+    <li>Número de cursos con indexación SAIPA activa.</li>
+    <li>Tendencia semanal del engagement global.</li>
+  </ul>
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/04-advisor-dashboard.png" alt="Advisor dashboard">
+    <figcaption>Figura 4. Dashboard del asesor — resumen institucional.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s5-3">5.3 Dashboard de riesgo</h2>
+  <p>
+    Lista única de todos los estudiantes en riesgo alto o medio atravesando todos los cursos
+    de la institución. Permite:
+  </p>
+  <ul>
+    <li>Filtrar por carrera, curso o cohorte.</li>
+    <li>Identificar alumnos que están en riesgo en <em>múltiples</em> cursos a la vez (señal fuerte).</li>
+    <li>Exportar la lista a CSV para reuniones de seguimiento académico.</li>
+  </ul>
+
+  <h2 class="section-h2" id="s5-4">5.4 Estadísticas de engagement</h2>
+  <p>
+    Gráficos comparativos entre cursos: tasa de uso del chat, % de alumnos vinculados a Telegram,
+    respuestas correctas del asistente, alertas enviadas por docentes. Útil para identificar
+    qué docentes están aprovechando SAIPA y cuáles podrían necesitar capacitación.
+  </p>
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/05-advisor-engagement.png" alt="Engagement">
+    <figcaption>Figura 5. Estadísticas de engagement comparativas por curso.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s5-5">5.5 Configuración por curso</h2>
+  <p>
+    Permite ajustar parámetros globales que afectan a todos los cursos: umbral del modelo de
+    riesgo (más o menos sensible), plantillas de alerta por defecto, frecuencia del cron de
+    agregación diaria.
+  </p>
+
+  <h2 class="section-h2" id="s5-6">5.6 Asistente SAIPA (chat del asesor)</h2>
+  <p>
+    En la esquina inferior derecha de <code>advisor.php</code> hay un botón flotante (FAB)
+    arrastrable que abre un chat con un asistente IA especializado en documentación del plugin
+    y buenas prácticas de acompañamiento académico. Puede preguntarle cosas como:
+  </p>
+  <ul>
+    <li>"¿Cómo interpreto que un alumno esté en riesgo medio estable?"</li>
+    <li>"¿Qué significa el indicador de engagement bajo?"</li>
+    <li>"¿Cómo configuro la plantilla de alerta?"</li>
+  </ul>
+
+  <figure>
+    <img src="../moodle-plugins/local_saipa/pix/screenshots/08-advisor-assistant.png" alt="Asistente SAIPA">
+    <figcaption>Figura 7. Asistente SAIPA como FAB flotante en el panel del asesor.</figcaption>
+  </figure>
+
+  <div class="callout note">
+    <strong>NOTA</strong>
+    Actualmente el asistente del asesor responde sobre documentación del plugin. En próximas
+    versiones se ampliará para responder preguntas sobre los datos en vivo ("¿cuántos alumnos
+    en alto riesgo esta semana?") usando tool-calling.
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 6: ADMINISTRADOR -->
+<div class="page-break"></div>
+<section id="s6">
+  <h1 class="section-h1">6. Guía del administrador (uso diario)</h1>
+
+  <p>
+    Esta sección cubre las tareas operativas del administrador del sitio Moodle que tiene SAIPA
+    en producción. No incluye instalación (ver Manual de Instalación) sino operación corriente.
+  </p>
+
+  <h2 class="section-h2" id="s6-1">6.1 Indexación de cursos</h2>
+  <p>
+    Cada curso que use SAIPA debe tener su material indexado en el motor de IA. La indexación
+    es lo que permite al chat responder preguntas. Un curso sin indexar no tendrá chat funcional.
+  </p>
+  <p>Dispare una indexación desde:</p>
+  <ul>
+    <li><strong>Panel docente</strong>: botón <kbd>Indexar curso</kbd>. Procesa en background.</li>
+    <li><strong>Cron</strong>: la tarea <code>local_saipa\task\reindex_course</code> re-indexa cursos modificados automáticamente cada día.</li>
+    <li><strong>CLI</strong>: para indexación masiva inicial:</li>
+  </ul>
+<pre><code>php /var/www/html/local/saipa/cli/index_all_courses.php --force</code></pre>
+
+  <h2 class="section-h2" id="s6-2">6.2 Monitoreo de estado</h2>
+  <p>
+    Acceda a <em>Site administration → Reports → SAIPA Status</em> para ver el estado del motor
+    de IA, Ollama, ChromaDB y la conexión con Telegram/WhatsApp. La página muestra un resumen
+    con semáforos verde/amarillo/rojo y permite reiniciar componentes individuales.
+  </p>
+<pre><code># Verificación rápida desde terminal
+curl -s https://engine.sudominio.edu/health | python3 -m json.tool</code></pre>
+
+  <h2 class="section-h2" id="s6-3">6.3 Gestión de vinculaciones Telegram</h2>
+  <p>
+    Desde <em>Site administration → Plugins → Local plugins → SAIPA → Telegram links</em> puede:
+  </p>
+  <ul>
+    <li>Ver todos los alumnos vinculados con su chat_id.</li>
+    <li>Revocar una vinculación (útil si un alumno perdió acceso al Telegram original).</li>
+    <li>Ver el log de mensajes enviados y fallos de entrega.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 7: FAQ -->
+<div class="page-break"></div>
+<section id="s7">
+  <h1 class="section-h1">7. Preguntas frecuentes</h1>
+
+  <h3 class="section-h3">¿SAIPA reemplaza al docente?</h3>
+  <p>
+    No. SAIPA es una herramienta de asistencia: responde preguntas rutinarias del material,
+    detecta señales tempranas de abandono y permite intervenir a tiempo. Las decisiones
+    pedagógicas las sigue tomando siempre el docente.
+  </p>
+
+  <h3 class="section-h3">¿SAIPA usa ChatGPT?</h3>
+  <p>
+    No necesariamente. La configuración por defecto usa modelos locales (Ollama + qwen2.5)
+    corriendo en el servidor de la institución, sin enviar datos a proveedores externos. Si la
+    institución lo desea, puede configurar un proveedor en la nube, pero es opcional.
+  </p>
+
+  <h3 class="section-h3">¿El asistente puede "inventar" respuestas?</h3>
+  <p>
+    SAIPA usa RAG (Retrieval-Augmented Generation), lo que significa que el asistente solo
+    responde con información del material indexado y cita la fuente. El riesgo de "alucinación"
+    es bajo. Si la información no está en el curso, el asistente lo dice explícitamente.
+  </p>
+
+  <h3 class="section-h3">¿Puedo desactivar SAIPA para un alumno puntual?</h3>
+  <p>
+    Sí. En el panel docente, cada alumno tiene una opción <em>"Excluir del modelo de riesgo"</em>
+    que desactiva el cálculo para ese usuario sin afectar a otros. Las alertas tampoco se le
+    envían mientras esté excluido.
+  </p>
+
+  <h3 class="section-h3">¿Qué pasa si el alumno no tiene Telegram?</h3>
+  <p>
+    Las alertas se envían por la <em>mensajería interna de Moodle</em> como respaldo automático.
+    El alumno las verá como cualquier otro mensaje del docente al ingresar a la plataforma.
+    El chat dentro del bloque del curso sigue funcionando normalmente sin Telegram.
+  </p>
+
+  <h3 class="section-h3">¿Cuánto tiempo guarda SAIPA el historial de chats?</h3>
+  <p>
+    El historial se guarda indefinidamente por defecto, pero la configuración global permite
+    establecer un período de retención automática (ej. 6 meses). Los alumnos pueden solicitar
+    borrado de sus propios datos a través del sistema de privacidad estándar de Moodle.
+  </p>
+
+  <h3 class="section-h3">¿SAIPA funciona en dispositivos móviles?</h3>
+  <p>
+    Sí. El bloque SAIPA se muestra correctamente en la versión web móvil de Moodle y en la app
+    oficial de Moodle. Además, los alumnos pueden interactuar con SAIPA íntegramente desde
+    Telegram sin necesidad de abrir Moodle.
+  </p>
+
+  <h3 class="section-h3">¿Puedo exportar las conversaciones para una investigación pedagógica?</h3>
+  <p>
+    Sí, el asesor académico puede exportar un CSV agregado desde el panel de estadísticas. Para
+    exportaciones con contenido textual debe solicitarse al administrador, que puede extraerlas
+    respetando la privacidad (anonimizadas por defecto).
+  </p>
+</section>
+
+<!-- ============================================================ SECCIÓN 8: GLOSARIO -->
+<div class="page-break"></div>
+<section id="s8">
+  <h1 class="section-h1">8. Glosario</h1>
+
+  <div class="table-wrapper">
+    <table class="std">
+      <thead><tr><th style="width:22%;">Término</th><th>Definición</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Alerta proactiva</strong></td><td>Mensaje que envía el docente (o el sistema automáticamente) a un alumno detectado en riesgo, con el objetivo de intervenir antes del abandono.</td></tr>
+        <tr><td><strong>Asistente SAIPA</strong></td><td>Chat flotante (FAB) disponible en el panel del asesor académico para preguntas sobre la documentación del plugin.</td></tr>
+        <tr><td><strong>Badge de riesgo</strong></td><td>Etiqueta visual (verde / amarillo / rojo) que indica el nivel estimado de riesgo de abandono de un alumno.</td></tr>
+        <tr><td><strong>Bloque SAIPA</strong></td><td>Widget lateral que aparece dentro de cada curso de Moodle con el chat del asistente.</td></tr>
+        <tr><td><strong>ChromaDB</strong></td><td>Base de datos vectorial donde se guardan los fragmentos del material del curso indexados para búsquedas semánticas.</td></tr>
+        <tr><td><strong>Engagement</strong></td><td>Indicador agregado del nivel de participación de los alumnos en un curso (accesos, chats, entregas).</td></tr>
+        <tr><td><strong>Indexación</strong></td><td>Proceso por el cual el material del curso (PDFs, páginas, libros) se procesa y almacena en ChromaDB para que el asistente pueda responder preguntas sobre él.</td></tr>
+        <tr><td><strong>LLM</strong></td><td>Modelo de lenguaje grande (Large Language Model). Es el componente que redacta las respuestas del asistente. SAIPA usa por defecto Ollama con qwen2.5.</td></tr>
+        <tr><td><strong>Ollama</strong></td><td>Runtime para correr modelos LLM locales en el servidor de la institución, sin depender de proveedores externos.</td></tr>
+        <tr><td><strong>Panel docente</strong></td><td>Página <code>teacher.php</code> donde el docente ve el riesgo de sus alumnos, el historial del curso y puede enviar alertas.</td></tr>
+        <tr><td><strong>RAG</strong></td><td>Retrieval-Augmented Generation. Técnica donde el LLM consulta primero una base de conocimiento (ChromaDB) antes de responder, para citar fuentes y evitar alucinaciones.</td></tr>
+        <tr><td><strong>Saipa-engine</strong></td><td>Servicio Python (FastAPI) que corre junto a Moodle y contiene la lógica de IA: RAG, XGBoost, integraciones de Telegram.</td></tr>
+        <tr><td><strong>Vinculación Telegram</strong></td><td>Proceso por el cual un alumno asocia su cuenta Moodle con su cuenta de Telegram mediante un código de verificación temporal.</td></tr>
+        <tr><td><strong>XGBoost</strong></td><td>Modelo de machine learning usado por SAIPA para clasificar el riesgo de abandono de cada alumno a partir de su actividad en Moodle.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="section-rule">
+
+  <p style="text-align: center; font-size: 9pt; color: var(--gray3); margin-top: 40px;">
+    Fin del Manual de Usuario de SAIPA v0.5.0 — Abril 2026<br>
+    Schaller &amp; Ponce — <em>Soluciones Educativas con Inteligencia Artificial</em><br>
+    dev@schaller-ponce.com.ar
+  </p>
+</section>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+
+</body>
+</html>

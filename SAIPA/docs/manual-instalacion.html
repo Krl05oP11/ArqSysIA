@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAIPA — Manual de Instalación v0.5.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  /* ---- Page setup ---- */
+  @page { size: A4; margin: 25mm 10mm 25mm 20mm; }
+  @media print {
+    .page-break  { page-break-before: always; }
+    nav, .no-print { display: none; }
+    /* En impresión: sin padding lateral en body para aprovechar todo el ancho */
+    body         { padding: 0; max-width: none; }
+    /* Eliminar scrollbar de tablas y bloques de código; el contenido se escala */
+    .table-wrapper { overflow-x: visible; }
+    pre            { overflow-x: visible; white-space: pre-wrap; word-break: break-all; }
+    /* Reducir fuente de tablas para que quepan sin desbordarse */
+    table.std      { font-size: 8.5pt; }
+    table.std th   { font-size: 8pt; }
+    /* Evitar cortes en bloques atómicos entre páginas */
+    table.std, figure, .mermaid, .callout, ol.steps li, pre {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1.section-h1, h2.section-h2, h3.section-h3, h4.section-h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+  }
+
+  :root {
+    --blue:   #1a3a6b;
+    --blue2:  #2557a7;
+    --teal:   #0d7377;
+    --gray1:  #f4f6fb;
+    --gray2:  #e8ecf4;
+    --gray3:  #b0bacf;
+    --black:  #1a1a2e;
+    --text:   #2c2c3e;
+    --warn:   #8b3a00;
+    --warn-bg:#fff4e6;
+    --note:   #003366;
+    --note-bg:#eaf2ff;
+    --ok:     #1a5c28;
+    --ok-bg:  #edfff2;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: var(--text);
+    background: #fff;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 0 10mm;
+  }
+
+  /* ---- Cover ---- */
+  #cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 96vh;
+    text-align: center;
+    border-bottom: 4px solid var(--blue);
+    padding: 20mm 0 15mm;
+    gap: 0;
+  }
+  #cover .logo-box {
+    width: 90px; height: 90px;
+    background: var(--blue);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(26,58,107,.25);
+  }
+  #cover .logo-box span {
+    color: #fff; font-size: 32pt; font-weight: 900; letter-spacing: -2px;
+  }
+  #cover h1 { font-size: 28pt; color: var(--blue); line-height: 1.15; margin-bottom: 6px; }
+  #cover h2 { font-size: 15pt; color: var(--teal); font-weight: 400; margin-bottom: 30px; }
+  #cover .tag {
+    display: inline-block;
+    background: var(--gray2); color: var(--blue);
+    padding: 4px 14px; border-radius: 20px;
+    font-size: 9pt; font-weight: 600; letter-spacing: .5px;
+    margin-bottom: 40px;
+  }
+  #cover table.meta { border-collapse: collapse; width: 320px; font-size: 9.5pt; }
+  #cover table.meta td { padding: 4px 10px; border-bottom: 1px solid var(--gray2); }
+  #cover table.meta td:first-child { color: var(--gray3); font-weight: 600; text-align: right; }
+  #cover .footer-note {
+    margin-top: auto; padding-top: 30px;
+    font-size: 8.5pt; color: var(--gray3);
+  }
+
+  /* ---- Headings ---- */
+  h1, h2, h3, h4, h5 { color: var(--blue); font-weight: 700; }
+  h1.section-h1 { font-size: 17pt; border-bottom: 3px solid var(--blue2); padding-bottom: 6px; margin: 30px 0 14px; }
+  h2.section-h2 { font-size: 13pt; border-left: 4px solid var(--teal); padding-left: 10px; margin: 22px 0 10px; }
+  h3.section-h3 { font-size: 11pt; margin: 16px 0 8px; color: var(--blue2); }
+  h4.section-h4 { font-size: 10.5pt; margin: 12px 0 6px; color: var(--teal); }
+
+  /* ---- ToC ---- */
+  #toc h1 { font-size: 17pt; border-bottom: 3px solid var(--blue2); padding-bottom: 6px; margin-bottom: 16px; }
+  #toc ol { list-style: none; padding: 0; counter-reset: toc-top; }
+  #toc > ol > li { counter-increment: toc-top; margin-bottom: 2px; }
+  #toc > ol > li::before { content: counter(toc-top) ". "; font-weight: 700; color: var(--blue); margin-right: 4px; }
+  #toc ol ol { padding-left: 22px; counter-reset: toc-sub; }
+  #toc ol ol li { counter-increment: toc-sub; }
+  #toc ol ol li::before { content: counter(toc-top) "." counter(toc-sub) ". "; font-weight: 400; color: var(--blue2); margin-right: 4px; }
+  #toc a { color: var(--text); text-decoration: none; }
+  #toc a:hover { text-decoration: underline; color: var(--blue2); }
+  #toc li { font-size: 10pt; padding: 2px 0; }
+  #toc > ol > li { font-size: 10.5pt; font-weight: 600; }
+
+  /* ---- Figures / Tables lists ---- */
+  .list-of { margin-bottom: 10px; }
+  .list-of h1 { font-size: 14pt; border-bottom: 2px solid var(--gray2); padding-bottom: 4px; margin-bottom: 10px; }
+  .list-of ol { list-style: none; padding: 0; }
+  .list-of li { font-size: 9.5pt; padding: 2px 0; display: flex; gap: 6px; }
+  .list-of li .label { color: var(--blue2); font-weight: 600; white-space: nowrap; }
+  .list-of li .dots { flex: 1; border-bottom: 1px dotted var(--gray3); margin-bottom: 3px; }
+  .list-of li .pg { color: var(--gray3); font-size: 9pt; white-space: nowrap; }
+
+  /* ---- Callouts ---- */
+  .callout { border-left: 4px solid; border-radius: 4px; padding: 10px 14px; margin: 14px 0; font-size: 9.5pt; }
+  .callout.note   { border-color: var(--blue2); background: var(--note-bg); color: var(--note); }
+  .callout.warn   { border-color: #d97706;      background: var(--warn-bg); color: var(--warn); }
+  .callout.ok     { border-color: #16a34a;      background: var(--ok-bg);   color: var(--ok); }
+  .callout strong { font-weight: 700; text-transform: uppercase; font-size: 8.5pt; letter-spacing: .5px; margin-right: 4px; }
+
+  /* ---- Code ---- */
+  pre, code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    background: var(--gray1);
+    border: 1px solid var(--gray2);
+    border-radius: 4px;
+  }
+  code { padding: 1px 5px; }
+  pre { padding: 12px 14px; overflow-x: auto; margin: 10px 0; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  .filename { font-size: 8.5pt; color: var(--gray3); font-family: monospace; margin-bottom: -4px; }
+
+  /* ---- Tables ---- */
+  figure { margin: 16px 0; }
+  figure figcaption {
+    font-size: 9pt; color: var(--blue); font-style: italic; text-align: center;
+    margin-top: 6px;
+  }
+  figure.diagram figcaption { margin-top: 8px; }
+  .table-wrapper { overflow-x: auto; margin: 10px 0; }
+  table.std {
+    width: 100%; border-collapse: collapse; font-size: 9.5pt;
+  }
+  table.std th {
+    background: var(--blue); color: #fff;
+    padding: 7px 10px; text-align: left; font-size: 9pt;
+  }
+  table.std td { padding: 6px 10px; border-bottom: 1px solid var(--gray2); vertical-align: top; }
+  table.std tr:nth-child(even) td { background: var(--gray1); }
+  table.std code { font-size: 8.5pt; word-break: break-word; }
+
+  /* ---- Steps ---- */
+  ol.steps { list-style: none; counter-reset: step; padding: 0; }
+  ol.steps li { counter-increment: step; padding: 6px 0 6px 40px; position: relative; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 6px;
+    width: 26px; height: 26px;
+    background: var(--blue2); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 9pt; font-weight: 700;
+  }
+
+  /* ---- Diagrams ---- */
+  .mermaid { background: var(--gray1); border: 1px solid var(--gray2); border-radius: 6px; padding: 16px; text-align: center; margin: 10px 0; }
+
+  /* ---- Inline badge ---- */
+  .badge {
+    display: inline-block;
+    font-size: 7.5pt; font-weight: 700;
+    padding: 1px 7px; border-radius: 10px;
+    vertical-align: middle; letter-spacing: .3px;
+    margin: 0 2px;
+  }
+  .badge.req  { background: #fde68a; color: #78350f; }
+  .badge.opt  { background: #bbf7d0; color: #14532d; }
+  .badge.port { background: #dbeafe; color: #1e3a8a; }
+  .badge.hard { background: #fee2e2; color: #991b1b; }
+  .badge.soft { background: #fef9c3; color: #713f12; }
+
+  /* ---- Section divider ---- */
+  hr.section-rule { border: none; border-top: 2px solid var(--gray2); margin: 30px 0; }
+
+  p { margin-bottom: 8px; }
+  ul, ol { padding-left: 22px; margin-bottom: 8px; }
+  li { margin-bottom: 3px; }
+  a { color: var(--blue2); }
+
+  /* ---- Print page numbers (CSS counters) ---- */
+  @media print {
+    body { counter-reset: page-count; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ PORTADA -->
+<section id="cover">
+  <div class="logo-box"><span>S</span></div>
+  <h1>SAIPA</h1>
+  <h2>Sistema de Asistencia Inteligente y Prevención del Abandono</h2>
+  <span class="tag">MANUAL DE INSTALACIÓN — v0.5.0</span>
+
+  <table class="meta">
+    <tr><td>Versión</td><td><strong>0.5.0</strong> (build 2026032402)</td></tr>
+    <tr><td>Fecha</td><td>Marzo 2026</td></tr>
+    <tr><td>Autores</td><td>Schaller &amp; Ponce</td></tr>
+    <tr><td>Contacto</td><td>dev@schaller-ponce.com.ar</td></tr>
+    <tr><td>Licencia</td><td>Propietaria — uso institucional</td></tr>
+  </table>
+
+  <p class="footer-note">
+    Este documento es de distribución restringida.<br>
+    Schaller &amp; Ponce — Soluciones Educativas con Inteligencia Artificial
+  </p>
+</section>
+
+<!-- ============================================================ TABLA DE CONTENIDOS -->
+<div class="page-break"></div>
+<section id="toc">
+  <h1>Tabla de Contenidos</h1>
+  <ol>
+    <li value="0"><a href="#s0">Escenarios de despliegue</a>
+      <ol>
+        <li><a href="#s0-d">Quick Start — Escenario D (engine hosteado)</a></li>
+        <li><a href="#s0-decision">Árbol de decisión</a></li>
+      </ol>
+    </li>
+    <li><a href="#s1">Introducción</a>
+      <ol>
+        <li><a href="#s1-1">Propósito y alcance</a></li>
+        <li><a href="#s1-2">Audiencia objetivo</a></li>
+        <li><a href="#s1-3">Componentes del sistema</a></li>
+        <li><a href="#s1-4">Convenciones tipográficas</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Prerrequisitos</a>
+      <ol>
+        <li><a href="#s2-1">Infraestructura de hardware</a></li>
+        <li><a href="#s2-2">Software base</a></li>
+        <li><a href="#s2-3">Puertos de red</a></li>
+        <li><a href="#s2-4">Cuentas y credenciales externas</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Preparación del entorno</a>
+      <ol>
+        <li><a href="#s3-1">Instalación de Docker y Docker Compose</a></li>
+        <li><a href="#s3-2">Clonado del repositorio saipa-engine</a></li>
+        <li><a href="#s3-3">Configuración del archivo .env</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Despliegue del motor SAIPA (saipa-engine)</a>
+      <ol>
+        <li><a href="#s4-1">Estructura del Docker Compose</a></li>
+        <li><a href="#s4-2">Primera ejecución y verificación</a></li>
+        <li><a href="#s4-3">Persistencia de volúmenes</a></li>
+        <li><a href="#s4-4">Modo CPU — Escenarios B y C (sin GPU)</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Instalación de plugins en Moodle</a>
+      <ol>
+        <li><a href="#s5-1">Instalación de local_saipa</a></li>
+        <li><a href="#s5-2">Instalación de block_saipa</a></li>
+        <li><a href="#s5-3">Verificación del estado de plugins</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Configuración en Moodle</a>
+      <ol>
+        <li><a href="#s6-1">Ajustes generales de SAIPA</a></li>
+        <li><a href="#s6-2">Habilitación del servicio web externo</a></li>
+        <li><a href="#s6-3">Agregar el bloque SAIPA a los cursos</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Configuración del canal Telegram</a>
+      <ol>
+        <li><a href="#s7-1">Creación del bot con BotFather</a></li>
+        <li><a href="#s7-2">Registro del webhook</a></li>
+        <li><a href="#s7-3">Flujo de vinculación del alumno</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Configuración del canal WhatsApp</a>
+      <ol>
+        <li><a href="#s8-1">Instalación de Evolution API</a></li>
+        <li><a href="#s8-2">Vinculación del número de WhatsApp</a></li>
+        <li><a href="#s8-3">Flujo de verificación OTP del alumno</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Verificación post-instalación</a>
+      <ol>
+        <li><a href="#s9-1">Página de estado (status.php)</a></li>
+        <li><a href="#s9-2">Prueba integral del asistente</a></li>
+        <li><a href="#s9-3">Indexación del primer curso</a></li>
+      </ol>
+    </li>
+    <li><a href="#s10">Configuración de Nginx y TLS</a>
+      <ol>
+        <li><a href="#s10-1">Estructura de virtualhost recomendada</a></li>
+        <li><a href="#s10-2">Obtención de certificado con Certbot</a></li>
+        <li><a href="#s10-3">Consideraciones de seguridad de red</a></li>
+      </ol>
+    </li>
+    <li><a href="#s11">Actualizaciones de versión</a>
+      <ol>
+        <li><a href="#s11-1">Actualización del engine</a></li>
+        <li><a href="#s11-2">Actualización de los plugins</a></li>
+        <li><a href="#s11-3">Compatibilidad entre versiones</a></li>
+      </ol>
+    </li>
+    <li><a href="#s12">Migración desde Moodle menor a 4.0</a>
+      <ol>
+        <li><a href="#s12-1">Ruta de actualización de Moodle</a></li>
+        <li><a href="#s12-2">Consideraciones previas</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">Resolución de problemas</a>
+      <ol>
+        <li><a href="#s13-1">Diagnóstico con la página de estado</a></li>
+        <li><a href="#s13-2">Problemas frecuentes y soluciones</a></li>
+        <li><a href="#s13-3">Comandos de mantenimiento</a></li>
+      </ol>
+    </li>
+    <li><a href="#s14">Seguridad y privacidad</a>
+      <ol>
+        <li><a href="#s14-1">Modelo de autenticación y autorización</a></li>
+        <li><a href="#s14-2">Confidencialidad de datos de alumnos y docentes</a></li>
+        <li><a href="#s14-3">Licenciamiento y validación</a></li>
+      </ol>
+    </li>
+    <li><a href="#s15">Referencias</a></li>
+  </ol>
+</section>
+
+<!-- ============================================================ LISTA DE FIGURAS -->
+<div class="page-break"></div>
+<section class="list-of">
+  <h1>Lista de Figuras</h1>
+  <ol>
+    <li><span class="label">Figura 1.</span><span class="dots"></span><span>Arquitectura general del sistema SAIPA</span></li>
+    <li><span class="label">Figura 2.</span><span class="dots"></span><span>Topología Docker Compose (red interna)</span></li>
+    <li><span class="label">Figura 3.</span><span class="dots"></span><span>Flujo de instalación de plugins en Moodle</span></li>
+    <li><span class="label">Figura 4.</span><span class="dots"></span><span>Flujo de vinculación de cuenta Telegram</span></li>
+    <li><span class="label">Figura 5.</span><span class="dots"></span><span>Flujo de verificación OTP WhatsApp</span></li>
+    <li><span class="label">Figura 6.</span><span class="dots"></span><span>Página de estado SAIPA (status.php)</span></li>
+    <li><span class="label">Figura 7.</span><span class="dots"></span><span>Diagrama de capas Nginx / TLS</span></li>
+    <li><span class="label">Figura 8.</span><span class="dots"></span><span>Diagrama de evaluación de licencia</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ LISTA DE TABLAS -->
+<section class="list-of" style="margin-top: 24px;">
+  <h1>Lista de Tablas</h1>
+  <ol>
+    <li><span class="label">Tabla 1.</span><span class="dots"></span><span>Requisitos de hardware mínimos y recomendados</span></li>
+    <li><span class="label">Tabla 2.</span><span class="dots"></span><span>Software base requerido con versiones mínimas</span></li>
+    <li><span class="label">Tabla 3.</span><span class="dots"></span><span>Puertos de red utilizados por SAIPA</span></li>
+    <li><span class="label">Tabla 4.</span><span class="dots"></span><span>Variables de entorno del motor SAIPA</span></li>
+    <li><span class="label">Tabla 5.</span><span class="dots"></span><span>Variables de entorno — canal Telegram</span></li>
+    <li><span class="label">Tabla 6.</span><span class="dots"></span><span>Variables de entorno — canal WhatsApp</span></li>
+    <li><span class="label">Tabla 7.</span><span class="dots"></span><span>Ajustes de configuración en Moodle</span></li>
+    <li><span class="label">Tabla 8.</span><span class="dots"></span><span>Comparativa de canales de mensajería</span></li>
+    <li><span class="label">Tabla 9.</span><span class="dots"></span><span>Tablas de base de datos creadas por SAIPA</span></li>
+    <li><span class="label">Tabla 10.</span><span class="dots"></span><span>Diagnóstico de problemas frecuentes</span></li>
+    <li><span class="label">Tabla 11.</span><span class="dots"></span><span>Comandos de mantenimiento de referencia rápida</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ SECCIÓN 0: ESCENARIOS -->
+<div class="page-break"></div>
+<section id="s0">
+  <h1 class="section-h1">0. Escenarios de despliegue</h1>
+  <p>
+    Antes de comenzar, identificá el escenario que corresponde a tu institución. Cada escenario
+    requiere pasos distintos. Leé solo las secciones marcadas con tu escenario.
+  </p>
+
+  <div class="table-wrapper">
+  <table class="std">
+    <tr>
+      <th>Escenario</th>
+      <th>Infraestructura de la universidad</th>
+      <th>¿Quién instala el engine?</th>
+      <th>GPU requerida</th>
+      <th>Secciones a leer</th>
+    </tr>
+    <tr style="background:#edfff2;">
+      <td><strong>A</strong></td>
+      <td>Servidor Linux propio con Docker y GPU</td>
+      <td>IT de la universidad</td>
+      <td>✅ Sí (recomendado)</td>
+      <td>Todas (1–15)</td>
+    </tr>
+    <tr>
+      <td><strong>B</strong></td>
+      <td>Servidor Linux propio con Docker, <em>sin</em> GPU</td>
+      <td>IT de la universidad</td>
+      <td>❌ No (modo CPU)</td>
+      <td>1–13 + nota CPU (§4.4)</td>
+    </tr>
+    <tr>
+      <td><strong>C</strong></td>
+      <td>VPS en la nube (DigitalOcean, AWS, GCP, etc.)</td>
+      <td>IT de la universidad o proveedor cloud</td>
+      <td>❌ No (modo CPU)</td>
+      <td>1–13 + nota CPU (§4.4)</td>
+    </tr>
+    <tr style="background:#fff4e6;">
+      <td><strong>D ★</strong></td>
+      <td>Cualquiera — Moodle existente sin acceso root</td>
+      <td><strong>Schaller &amp; Ponce</strong> (engine hosteado)</td>
+      <td>N/A</td>
+      <td><strong>Solo §5, §6, §7</strong></td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="callout note" style="margin-top:1em;">
+    <strong>Escenario D — Piloto recomendado:</strong> La universidad instala únicamente los dos
+    plugins de Moodle (ZIPs). El equipo de Schaller &amp; Ponce provee la URL del engine y gestiona
+    toda la infraestructura de IA durante el período piloto. No se requiere Docker, GPU ni acceso
+    root al servidor. Es la opción de menor esfuerzo y la que se utiliza en los pilotos iniciales.
+  </div>
+
+  <!-- ── ESCENARIO D — QUICK START ─────────────────────────────────────────── -->
+  <h2 id="s0-d" class="section-h2">0.1 Quick Start — Escenario D (engine hosteado)</h2>
+  <p>
+    Si tu institución se encuentra en el Escenario D, solo necesitás completar los 6 pasos de esta
+    sección. Podés saltear las secciones 2, 3, 4 y 10 del manual completo.
+  </p>
+
+  <div class="callout warn">
+    <strong>Requisito previo:</strong> El equipo de Schaller &amp; Ponce debe haberte entregado
+    previamente la <strong>URL del engine</strong> y el <strong>token de API</strong> correspondientes
+    a tu institución. Sin esos datos no es posible completar el paso 4.
+  </div>
+
+  <h3 style="margin-top:1.2em;font-size:11pt;color:var(--blue2);">Paso D-1 — Verificar versión de Moodle</h3>
+  <p>
+    SAIPA requiere <strong>Moodle 4.2 o superior</strong>. Para verificarlo:
+    <br>Administración del sitio → Acerca de → verificar que la versión sea ≥ 4.2.
+  </p>
+
+  <h3 style="margin-top:1em;font-size:11pt;color:var(--blue2);">Paso D-2 — Instalar el plugin <code>local_saipa</code></h3>
+  <ol>
+    <li>Obtener el archivo <code>local_saipa-0.5.0.zip</code> del equipo de Schaller &amp; Ponce.</li>
+    <li>Ir a <strong>Administración del sitio → Plugins → Instalar plugins</strong>.</li>
+    <li>Arrastrar el ZIP al área de carga o usar el botón «Elegir archivo».</li>
+    <li>Hacer clic en <strong>Instalar plugin desde archivo ZIP</strong>.</li>
+    <li>Leer el informe de validación y pulsar <strong>Continuar</strong>.</li>
+    <li>Completar el asistente de actualización de base de datos y pulsar <strong>Continuar</strong> hasta finalizar.</li>
+  </ol>
+
+  <h3 style="margin-top:1em;font-size:11pt;color:var(--blue2);">Paso D-3 — Instalar el plugin <code>block_saipa</code></h3>
+  <ol>
+    <li>Obtener el archivo <code>block_saipa-0.5.0.zip</code>.</li>
+    <li>Repetir el mismo procedimiento del Paso D-2 con este ZIP.</li>
+    <li>
+      <strong>Importante:</strong> instalar <em>después</em> de <code>local_saipa</code>.
+      El bloque declara una dependencia del plugin local; si se instala primero, fallará la validación.
+    </li>
+  </ol>
+
+  <h3 style="margin-top:1em;font-size:11pt;color:var(--blue2);">Paso D-4 — Configurar la conexión al engine</h3>
+  <ol>
+    <li>Ir a <strong>Administración del sitio → Plugins → Plugins locales → SAIPA → Ajustes</strong>.</li>
+    <li>
+      Completar los campos con los valores provistos por Schaller &amp; Ponce:
+      <ul style="margin-top:0.5em;">
+        <li><strong>URL del engine SAIPA</strong>: por ejemplo <code>https://engine.saipa.schaller-ponce.com.ar</code></li>
+        <li><strong>Token de API</strong>: clave secreta de tu institución (formato UUID)</li>
+      </ul>
+    </li>
+    <li>Pulsar <strong>Guardar cambios</strong>.</li>
+    <li>Ir a <strong>Administración del sitio → Plugins → Plugins locales → SAIPA → Estado del sistema</strong> y verificar que el semáforo del engine esté en verde.</li>
+  </ol>
+
+  <h3 style="margin-top:1em;font-size:11pt;color:var(--blue2);">Paso D-5 — Habilitar el servicio web externo</h3>
+  <ol>
+    <li>Ir a <strong>Administración del sitio → Plugins → Servicios web → Ajustes generales</strong>.</li>
+    <li>Activar <strong>Habilitar servicios web</strong> → Guardar.</li>
+    <li>Ir a <strong>Administración del sitio → Plugins → Servicios web → Servicios externos</strong>.</li>
+    <li>Localizar el servicio <strong>SAIPA External Service</strong> y verificar que esté habilitado.</li>
+    <li>Hacer clic en <strong>Usuarios autorizados</strong> y agregar la cuenta de administrador o la cuenta de servicio SAIPA.</li>
+  </ol>
+
+  <h3 style="margin-top:1em;font-size:11pt;color:var(--blue2);">Paso D-6 — Agregar el bloque SAIPA a los cursos y verificar</h3>
+  <ol>
+    <li>Entrar a cualquier curso como docente o administrador.</li>
+    <li>Activar edición del curso (botón «Activar edición» o engranaje).</li>
+    <li>En el panel lateral → <strong>Agregar bloque</strong> → seleccionar <strong>Asistente SAIPA</strong>.</li>
+    <li>Guardar y verificar que el bloque aparezca con el chat habilitado.</li>
+    <li>Habilitar las tareas programadas (crons) de SAIPA:
+      <br><strong>Administración del sitio → Servidor → Tareas programadas</strong>
+      → habilitar <em>SAIPA Risk Evaluation</em> y <em>Aggregate daily SAIPA stats</em>.
+    </li>
+    <li>
+      Enviar un mensaje al chat del bloque y verificar que recibís respuesta del asistente.
+      Si la respuesta llega, la instalación está completa. ✅
+    </li>
+  </ol>
+
+  <div class="callout note" style="margin-top:1em;">
+    <strong>Telegram (opcional):</strong> Si tu institución desea activar el canal Telegram,
+    seguir la Sección 7 del manual completo una vez completados los pasos D-1 a D-6.
+    El equipo de Schaller &amp; Ponce puede asistir en la creación del bot institucional.
+  </div>
+
+  <!-- ── MATRIZ DE DECISIÓN ─────────────────────────────────────────────────── -->
+  <h2 id="s0-decision" class="section-h2">0.2 Árbol de decisión</h2>
+  <figure>
+    <div class="mermaid">
+flowchart TD
+    A["¿Tiene servidor Linux\npropio con acceso root?"] -->|Sí| B["¿Tiene Docker\ninstalado o puede instalarlo?"]
+    A -->|No / No sé| D["Escenario D ★\nEngine hosteado por S&P\nSolo instalar ZIPs en Moodle"]
+    B -->|Sí| C["¿Tiene GPU dedicada\n≥ 8 GB VRAM?"]
+    B -->|No| D
+    C -->|Sí| EA["Escenario A\nInstalación completa con GPU\nMejor rendimiento"]
+    C -->|No| EC["Escenarios B / C\nInstalación completa en CPU\nUsar modelo qwen2.5:7b"]
+    style D fill:#fff4e6,stroke:#e67e00
+    style EA fill:#edfff2,stroke:#1a5c28
+    </div>
+    <figcaption>Figura 0. Árbol de decisión para selección de escenario de despliegue.</figcaption>
+  </figure>
+
+</section>
+
+<!-- ============================================================ SECCIÓN 1: INTRODUCCIÓN -->
+<div class="page-break"></div>
+<section id="s1">
+  <h1 class="section-h1">1. Introducción</h1>
+
+  <h2 id="s1-1" class="section-h2">1.1 Propósito y alcance</h2>
+  <p>
+    El presente documento describe el procedimiento completo de instalación, configuración y puesta en
+    marcha del sistema <strong>SAIPA</strong> (Sistema de Asistencia Inteligente y Prevención del
+    Abandono) en un entorno universitario que ya cuenta con Moodle 4.x en producción. SAIPA extiende
+    Moodle con un motor de inteligencia artificial —basado en modelos de lenguaje locales y una base
+    vectorial— que permite a los alumnos consultar el material de sus cursos de manera conversacional,
+    mientras proporciona al docente métricas de riesgo académico en tiempo real.
+  </p>
+  <p>
+    El sistema tiene tres canales de interacción: la interfaz web nativa del bloque SAIPA dentro de
+    Moodle, el bot de <strong>Telegram</strong> y el número institucional de <strong>WhatsApp</strong>.
+    La filosofía del proyecto es <em>"buscar al alumno allí donde puede ser encontrado"</em>: el canal
+    elegido no cambia la calidad de la asistencia, sino el medio por el que el alumno decide llegar.
+  </p>
+  <p>
+    Este manual cubre únicamente la instalación del componente SAIPA. Se asume que Moodle 4.4 o
+    superior ya se encuentra operativo en el servidor de la institución. Las secciones de cada canal de
+    mensajería son opcionales y solo deben ejecutarse si la institución decide activar ese canal.
+  </p>
+
+  <h2 id="s1-2" class="section-h2">1.2 Audiencia objetivo</h2>
+  <p>
+    Este documento está dirigido al <strong>administrador de sistemas</strong> o al
+    <strong>responsable técnico de TI</strong> de la institución educativa. Se requiere familiaridad con:
+  </p>
+  <ul>
+    <li>Administración básica de Linux (comandos de terminal, edición de archivos de configuración).</li>
+    <li>Administración del panel de administración de Moodle (instalación de plugins, servicios web).</li>
+    <li>Docker y Docker Compose a nivel operativo (no se requiere conocimiento de desarrollo).</li>
+    <li>Fundamentos de redes: DNS, puertos, HTTPS / TLS.</li>
+  </ul>
+  <p>
+    No se requieren conocimientos de inteligencia artificial ni de desarrollo de software para llevar
+    a cabo la instalación.
+  </p>
+
+  <h2 id="s1-3" class="section-h2">1.3 Componentes del sistema</h2>
+  <p>SAIPA está compuesto por cuatro piezas de software que trabajan en conjunto:</p>
+
+  <figure>
+    <div class="mermaid">
+graph TB
+  subgraph Moodle["Moodle 4.4+ (servidor existente)"]
+    LP["local_saipa\nPlugin de lógica"]
+    BP["block_saipa\nBloque widget"]
+    LP <--> BP
+  end
+  subgraph Engine["saipa-engine (Docker)"]
+    API["FastAPI\n:8000"]
+    OL["Ollama\n:11434"]
+    CH["ChromaDB\n:8001"]
+    API --> OL
+    API --> CH
+  end
+  subgraph Msg["Mensajería (opcional)"]
+    TG["Bot Telegram\n(API pública)"]
+    WA["Evolution API\n:8080 (WhatsApp)"]
+  end
+  BP -- "REST / WS" --> API
+  LP -- "AJAX externo" --> API
+  API <-- webhook --> TG
+  API --> WA
+    </div>
+    <figcaption>Figura 1. Arquitectura general del sistema SAIPA.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>local_saipa</strong>: Plugin de tipo «local» en Moodle. Contiene toda la lógica de negocio, las funciones externas (API AJAX), la gestión de usuarios de Telegram y WhatsApp, la integración con el motor, y la página de estado.</li>
+    <li><strong>block_saipa</strong>: Bloque Moodle que renderiza el widget de chat, el panel de vinculación de Telegram y el panel de verificación de WhatsApp.</li>
+    <li><strong>saipa-engine</strong>: Servidor FastAPI que orquesta el modelo de lenguaje (Ollama), la base vectorial (ChromaDB) y los webhooks de mensajería. Se despliega mediante Docker Compose.</li>
+    <li><strong>Evolution API</strong> (opcional): Servidor de integración con WhatsApp Business mediante Baileys. Solo necesario si se activa el canal WhatsApp.</li>
+  </ul>
+
+  <h2 id="s1-4" class="section-h2">1.4 Convenciones tipográficas</h2>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Elemento</th><th>Significado</th></tr>
+    <tr><td><code>texto en monoespacio</code></td><td>Comando de terminal, ruta de archivo, nombre de variable o fragmento de código.</td></tr>
+    <tr><td><span class="badge req">REQUERIDO</span></td><td>Paso o parámetro obligatorio para el funcionamiento del sistema.</td></tr>
+    <tr><td><span class="badge opt">OPCIONAL</span></td><td>Paso o parámetro necesario solo para un canal o función específica.</td></tr>
+    <tr><td><div class="callout note" style="margin:0;padding:5px 10px;">NOTA</div></td><td>Información complementaria o aclaración.</td></tr>
+    <tr><td><div class="callout warn" style="margin:0;padding:5px 10px;">ADVERTENCIA</div></td><td>Acción que puede causar pérdida de datos o interrupción del servicio si no se realiza correctamente.</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 2: PRERREQUISITOS -->
+<div class="page-break"></div>
+<section id="s2">
+  <h1 class="section-h1">2. Prerrequisitos</h1>
+
+  <h2 id="s2-1" class="section-h2">2.1 Infraestructura de hardware</h2>
+  <p>
+    Los requisitos a continuación corresponden al servidor donde se instalará el motor SAIPA
+    (<em>saipa-engine</em>). Puede ser el mismo servidor donde corre Moodle o uno dedicado. En
+    entornos con más de 500 usuarios concurrentes, se recomienda un servidor dedicado.
+  </p>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr>
+      <th>Recurso</th>
+      <th>Mínimo</th>
+      <th>Recomendado</th>
+      <th>Notas</th>
+    </tr>
+    <tr>
+      <td>CPU</td>
+      <td>4 núcleos</td>
+      <td>8 núcleos</td>
+      <td>Ollama aprovecha todos los núcleos para inferencia CPU.</td>
+    </tr>
+    <tr>
+      <td>RAM</td>
+      <td>16 GB</td>
+      <td>32 GB</td>
+      <td>El modelo LLM por defecto (Llama 3.1 8B) requiere ~10 GB de RAM en CPU.</td>
+    </tr>
+    <tr>
+      <td>GPU (opcional)</td>
+      <td>—</td>
+      <td>NVIDIA 8 GB VRAM</td>
+      <td>Reduce el tiempo de respuesta de ~8 s a ~1.5 s. Requiere controladores CUDA ≥ 11.8.</td>
+    </tr>
+    <tr>
+      <td>Almacenamiento</td>
+      <td>50 GB SSD</td>
+      <td>200 GB SSD</td>
+      <td>Modelos Ollama: ~5-10 GB c/u. ChromaDB crece con el contenido indexado.</td>
+    </tr>
+    <tr>
+      <td>Red</td>
+      <td>100 Mbps</td>
+      <td>1 Gbps</td>
+      <td>Para descarga inicial de modelos. El tráfico de producción es bajo.</td>
+    </tr>
+  </table>
+  </div>
+  <figcaption>Tabla 1. Requisitos de hardware mínimos y recomendados.</figcaption>
+  </figure>
+
+  <h2 id="s2-2" class="section-h2">2.2 Software base</h2>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr>
+      <th>Componente</th>
+      <th>Versión mínima</th>
+      <th>Observaciones</th>
+    </tr>
+    <tr><td><strong>Moodle</strong></td><td>4.4 (build 2024042200)</td><td>Requerido para las API <code>core_external\external_api</code> modernas. Ver sección 12 para versiones anteriores.</td></tr>
+    <tr><td><strong>PHP</strong></td><td>8.2</td><td>Requerido por Moodle 4.4. Extensiones: <code>curl</code>, <code>json</code>, <code>mbstring</code>.</td></tr>
+    <tr><td><strong>Base de datos</strong></td><td>PostgreSQL 14 / MySQL 8 / MariaDB 10.6</td><td>SAIPA usa DDL estándar compatible con todos los motores soportados por Moodle.</td></tr>
+    <tr><td><strong>Servidor web (Moodle)</strong></td><td>Nginx 1.20 / Apache 2.4</td><td>Se requiere soporte HTTPS para que los módulos AMD funcionen correctamente.</td></tr>
+    <tr><td><strong>Docker Engine</strong></td><td>24.0</td><td>Para el servidor del engine. Instalar vía repositorio oficial de Docker.</td></tr>
+    <tr><td><strong>Docker Compose</strong></td><td>2.20 (plugin)</td><td>Incluido en Docker Desktop y en instalaciones recientes de Docker Engine.</td></tr>
+    <tr><td><strong>Sistema operativo</strong></td><td>Ubuntu 22.04 LTS / Debian 12</td><td>Otras distribuciones Linux compatibles con Docker son aceptables.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 2. Software base requerido con versiones mínimas.</figcaption>
+  </figure>
+
+  <h2 id="s2-3" class="section-h2">2.3 Puertos de red</h2>
+  <p>
+    Los siguientes puertos deben estar disponibles en el servidor del engine. Los puertos internos
+    (sin asterisco) solo deben ser accesibles desde la red interna del servidor Moodle, nunca desde
+    Internet directamente.
+  </p>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Puerto</th><th>Protocolo</th><th>Servicio</th><th>Exposición</th></tr>
+    <tr><td><code>80</code></td><td>TCP</td><td>Nginx (HTTP → HTTPS redirect)</td><td>Pública</td></tr>
+    <tr><td><code>443</code></td><td>TCP/TLS</td><td>Nginx (HTTPS, proxy al engine)</td><td>Pública</td></tr>
+    <tr><td><code>8000</code></td><td>TCP</td><td>saipa-engine FastAPI</td><td>Interna (detrás de Nginx)</td></tr>
+    <tr><td><code>8001</code></td><td>TCP</td><td>ChromaDB</td><td>Solo localhost</td></tr>
+    <tr><td><code>11434</code></td><td>TCP</td><td>Ollama LLM</td><td>Solo localhost</td></tr>
+    <tr><td><code>8080</code></td><td>TCP</td><td>Evolution API (WhatsApp) <span class="badge opt">OPC</span></td><td>Solo localhost / VPN</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 3. Puertos de red utilizados por SAIPA.</figcaption>
+  </figure>
+
+  <div class="callout warn">
+    <strong>Advertencia:</strong> Nunca exponga los puertos 8001, 11434 ni 8080 directamente a Internet. Un firewall (<code>ufw</code> o equivalente) debe denegar el tráfico externo en esos puertos.
+  </div>
+
+  <h2 id="s2-4" class="section-h2">2.4 Cuentas y credenciales externas</h2>
+  <p>Según los canales que la institución desee activar, se necesitan las siguientes cuentas:</p>
+  <ul>
+    <li><span class="badge req">REQUERIDO</span> <strong>Licencia SAIPA</strong>: token de licencia emitido por Schaller &amp; Ponce. Se configura en la variable <code>SAIPA_LICENSE_KEY</code>.</li>
+    <li><span class="badge opt">OPCIONAL — Telegram</span> Cuenta de Telegram del administrador para crear el bot con BotFather (gratuito, sin aprobación previa).</li>
+    <li><span class="badge opt">OPCIONAL — WhatsApp</span> Número de teléfono dedicado para el número institucional. Se vincula mediante un código QR a través de Evolution API.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 3: PREPARACIÓN DEL ENTORNO -->
+<div class="page-break"></div>
+<section id="s3">
+  <h1 class="section-h1">3. Preparación del entorno</h1>
+
+  <h2 id="s3-1" class="section-h2">3.1 Instalación de Docker y Docker Compose</h2>
+  <p>Ejecutar los siguientes comandos como usuario con privilegios <code>sudo</code> en el servidor del engine:</p>
+
+  <pre><code># Agregar repositorio oficial de Docker
+curl -fsSL https://get.docker.com | sh
+
+# Agregar el usuario al grupo docker (requiere cerrar y reabrir sesión)
+sudo usermod -aG docker $USER
+
+# Verificar instalación
+docker --version        # Docker version 24.x o superior
+docker compose version  # Docker Compose version 2.x o superior</code></pre>
+
+  <div class="callout note">
+    <strong>Nota:</strong> En instalaciones con GPU NVIDIA, instalar también el paquete <code>nvidia-container-toolkit</code> antes de iniciar el motor. Consultar la documentación oficial de NVIDIA Container Toolkit para el procedimiento de instalación según la distribución.
+  </div>
+
+  <h2 id="s3-2" class="section-h2">3.2 Obtención del paquete saipa-engine</h2>
+  <p>
+    El paquete <code>saipa-engine</code> es distribuido directamente por Schaller &amp; Ponce como
+    un archivo <code>.tar.gz</code> o mediante acceso a repositorio privado. Una vez obtenido,
+    descomprimir en el directorio de instalación deseado:
+  </p>
+
+  <pre><code># Ejemplo con archivo tar.gz
+tar -xzf saipa-engine-0.5.0.tar.gz -C /opt/
+mv /opt/saipa-engine-0.5.0 /opt/saipa-engine
+
+# Alternativamente, si se entrega como repositorio git
+git clone https://repo.schaller-ponce.com.ar/saipa-engine.git /opt/saipa-engine
+cd /opt/saipa-engine
+git checkout tags/v0.5.0</code></pre>
+
+  <h2 id="s3-3" class="section-h2">3.3 Configuración del archivo .env</h2>
+  <p>
+    El motor se configura mediante un archivo <code>.env</code> ubicado en la raíz de
+    <code>saipa-engine/</code>. Copiar la plantilla provista y editar los valores:
+  </p>
+
+  <pre><code>cd /opt/saipa-engine
+cp .env.example .env
+nano .env      # o el editor de preferencia</code></pre>
+
+  <p>Las variables de entorno se dividen en cuatro grupos según su función:</p>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Variable</th><th>Valor de ejemplo</th><th>Descripción</th></tr>
+    <tr><td><code>SAIPA_LICENSE_KEY</code></td><td><code>SP-XXXX-XXXX-XXXX</code></td><td>Token de licencia emitido por Schaller &amp; Ponce. <span class="badge req">REQUERIDO</span></td></tr>
+    <tr><td><code>SAIPA_API_SECRET</code></td><td><em>(generado)</em></td><td>Secreto compartido entre Moodle y el engine para autenticar llamadas. Generar con <code>openssl rand -hex 32</code>. <span class="badge req">REQUERIDO</span></td></tr>
+    <tr><td><code>OLLAMA_MODEL</code></td><td><code>qwen2.5:14b-16k</code></td><td>Nombre del modelo de lenguaje a usar. El motor lo descarga automáticamente en el primer inicio. Se recomienda qwen2.5:14b-16k por su ventana de contexto extendida (16 384 tokens), ideal para documentos académicos largos.</td></tr>
+    <tr><td><code>OLLAMA_BASE_URL</code></td><td><code>http://ollama:11434</code></td><td>URL interna de Ollama dentro de la red Docker.</td></tr>
+    <tr><td><code>CHROMA_HOST</code></td><td><code>chromadb</code></td><td>Nombre del servicio ChromaDB en Docker Compose.</td></tr>
+    <tr><td><code>CHROMA_PORT</code></td><td><code>8001</code></td><td>Puerto de ChromaDB.</td></tr>
+    <tr><td><code>ENGINE_LOG_LEVEL</code></td><td><code>info</code></td><td>Nivel de log: <code>debug</code>, <code>info</code>, <code>warning</code>, <code>error</code>.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 4. Variables de entorno del motor SAIPA (grupo general).</figcaption>
+  </figure>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Variable</th><th>Valor de ejemplo</th><th>Descripción</th></tr>
+    <tr><td><code>TELEGRAM_BOT_TOKEN</code></td><td><code>123456:ABC-DEF...</code></td><td>Token del bot obtenido de BotFather. <span class="badge opt">OPCIONAL</span></td></tr>
+    <tr><td><code>TELEGRAM_BOT_USERNAME</code></td><td><code>SaipaUniBot</code></td><td>Nombre de usuario del bot (sin @). <span class="badge opt">OPCIONAL</span></td></tr>
+    <tr><td><code>TELEGRAM_WEBHOOK_SECRET</code></td><td><em>(generado)</em></td><td>Token de validación del webhook. Generar con <code>openssl rand -hex 20</code>.</td></tr>
+    <tr><td><code>TELEGRAM_WEBHOOK_URL</code></td><td><code>https://saipa.universidad.edu/<wbr>api/telegram/webhook</code></td><td>URL pública donde Telegram envía los mensajes al engine. Debe ser HTTPS.</td></tr>
+    <tr><td><code>TELEGRAM_HMAC_SECRET</code></td><td><em>(generado)</em></td><td>Secreto para firmar los deep-links de vinculación. Generar con <code>openssl rand -hex 32</code>. Si se deja vacío, Moodle lo genera automáticamente en la primera ejecución.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 5. Variables de entorno — canal Telegram.</figcaption>
+  </figure>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Variable</th><th>Valor de ejemplo</th><th>Descripción</th></tr>
+    <tr><td><code>EVOLUTION_API_URL</code></td><td><code>http://evolution:8080</code></td><td>URL del servicio Evolution API dentro de Docker. <span class="badge opt">OPCIONAL</span></td></tr>
+    <tr><td><code>EVOLUTION_API_KEY</code></td><td><code>cambiar_por_clave_segura</code></td><td>Clave de API de Evolution (configurar en evolution.env).</td></tr>
+    <tr><td><code>EVOLUTION_INSTANCE_NAME</code></td><td><code>saipa-wa</code></td><td>Nombre de la instancia dentro de Evolution API.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 6. Variables de entorno — canal WhatsApp.</figcaption>
+  </figure>
+
+  <div class="callout warn">
+    <strong>Advertencia:</strong> El archivo <code>.env</code> contiene credenciales sensibles. Sus permisos deben ser <code>600</code> (<code>chmod 600 .env</code>) y no debe incluirse en ningún repositorio de control de versiones.
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 4: DESPLIEGUE DEL ENGINE -->
+<div class="page-break"></div>
+<section id="s4">
+  <h1 class="section-h1">4. Despliegue del motor SAIPA</h1>
+
+  <h2 id="s4-1" class="section-h2">4.1 Estructura del Docker Compose</h2>
+
+  <figure>
+    <div class="mermaid">
+graph LR
+  subgraph red_interna["Red interna Docker: saipa-net"]
+    E["saipa-engine\n:8000"]
+    O["ollama\n:11434"]
+    C["chromadb\n:8001"]
+    EV["evolution-api\n:8080 (opcional)"]
+  end
+  NX["Nginx\n(host)"] -->|proxy_pass 8000| E
+  E --> O
+  E --> C
+  E --> EV
+  NX -->|proxy_pass 8080| EV
+    </div>
+    <figcaption>Figura 2. Topología Docker Compose y red interna de SAIPA.</figcaption>
+  </figure>
+
+  <p>
+    El archivo <code>docker-compose.prod.yml</code> define cuatro servicios sobre una red
+    interna aislada (<code>saipa-net</code>). Ningún puerto de base de datos vectorial ni de Ollama
+    es mapeado al host; toda comunicación externa pasa por el servicio <code>saipa-engine</code>.
+  </p>
+
+  <h2 id="s4-2" class="section-h2">4.2 Primera ejecución y verificación</h2>
+
+  <ol class="steps">
+    <li>
+      <strong>Iniciar todos los servicios:</strong>
+      <pre><code>cd /opt/saipa-engine
+docker compose -f docker-compose.prod.yml up -d</code></pre>
+    </li>
+    <li>
+      <strong>Descargar el modelo de lenguaje</strong> (solo la primera vez; puede tardar varios minutos según el ancho de banda):
+      <pre><code>docker compose -f docker-compose.prod.yml exec ollama ollama pull qwen2.5:14b-16k</code></pre>
+    </li>
+    <li>
+      <strong>Verificar que todos los contenedores estén corriendo:</strong>
+      <pre><code>docker compose -f docker-compose.prod.yml ps</code></pre>
+      Todos los servicios deben aparecer con estado <code>running</code>.
+    </li>
+    <li>
+      <strong>Probar el endpoint de salud del engine:</strong>
+      <pre><code>curl http://localhost:8000/health</code></pre>
+      La respuesta esperada es un JSON con los campos <code>status</code>, <code>ollama</code>, <code>chromadb</code> y <code>version</code>, todos con valor positivo.
+    </li>
+  </ol>
+
+  <div class="callout note">
+    <strong>Nota:</strong> Si se usa GPU NVIDIA, agregar el bloque <code>deploy.resources.reservations.devices</code> al servicio <code>ollama</code> en el archivo Compose. Consultar la sección «GPU» del archivo <code>docker-compose.prod.yml</code> que viene comentada por defecto.
+  </div>
+
+  <h2 id="s4-3" class="section-h2">4.3 Persistencia de volúmenes</h2>
+  <p>Los siguientes volúmenes Docker persisten los datos entre reinicios:</p>
+  <ul>
+    <li><code>saipa_ollama_models</code>: Modelos LLM descargados. Evita re-descargar el modelo en cada reinicio.</li>
+    <li><code>saipa_chroma_data</code>: Base vectorial con el contenido de los cursos indexados.</li>
+    <li><code>saipa_evolution_data</code>: Estado de sesión WhatsApp (solo si Evolution API está activo).</li>
+  </ul>
+  <div class="callout warn">
+    <strong>Advertencia:</strong> No eliminar los volúmenes de Docker sin realizar una copia de seguridad previa. La pérdida del volumen <code>saipa_chroma_data</code> implica la re-indexación de todos los cursos.
+  </div>
+
+  <h2 id="s4-4" class="section-h2">4.4 Modo CPU — Escenarios B y C (sin GPU) <span class="badge opt">ESC. B/C</span></h2>
+  <p>
+    Si el servidor no dispone de GPU dedicada, el motor Ollama ejecuta el modelo de lenguaje en CPU.
+    El sistema funciona correctamente pero los tiempos de respuesta son mayores. Se recomiendan los
+    siguientes ajustes para optimizar el rendimiento:
+  </p>
+
+  <h3 style="font-size:10.5pt;margin-top:0.8em;color:var(--blue2);">4.4.1 Usar modelo más ligero</h3>
+  <p>
+    En lugar de <code>qwen2.5:14b</code> (el modelo por defecto), usar <code>qwen2.5:7b</code>.
+    Reduce el tiempo de respuesta a la mitad con una leve disminución de calidad, aceptable
+    para la mayoría de los casos de uso:
+  </p>
+  <pre><code># En docker/saipa-engine.env, cambiar:
+OLLAMA_MODEL=qwen2.5:7b
+
+# En config.py del engine, el modelo se lee desde la variable de entorno.
+# Luego descargar el modelo dentro del contenedor:
+docker exec saipa-ollama ollama pull qwen2.5:7b</code></pre>
+
+  <h3 style="font-size:10.5pt;margin-top:0.8em;color:var(--blue2);">4.4.2 Maximizar hilos de CPU</h3>
+  <pre><code># En docker-compose.yml, agregar bajo el servicio saipa-engine:
+environment:
+  OLLAMA_NUM_THREAD: "8"   # Ajustar al número de núcleos físicos disponibles</code></pre>
+
+  <h3 style="font-size:10.5pt;margin-top:0.8em;color:var(--blue2);">4.4.3 Ajustar timeouts</h3>
+  <p>
+    Con CPU, una respuesta puede tardar 30–90 segundos. Verificar que el timeout del servidor web
+    de Moodle no corte la conexión antes:
+  </p>
+  <pre><code># En nginx.conf (si usás Nginx como proxy de Moodle):
+proxy_read_timeout 120s;
+proxy_send_timeout 120s;</code></pre>
+
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Hardware</th><th>Modelo recomendado</th><th>Tiempo de respuesta aprox.</th></tr>
+    <tr><td>GPU RTX 3090 / 4090 (24 GB)</td><td>qwen2.5:14b</td><td>2–4 s</td></tr>
+    <tr><td>GPU RTX 3070 / 4070 (8–12 GB)</td><td>qwen2.5:7b</td><td>3–6 s</td></tr>
+    <tr><td>CPU 8 núcleos, 32 GB RAM</td><td>qwen2.5:7b</td><td>25–45 s</td></tr>
+    <tr><td>CPU 4 núcleos, 16 GB RAM</td><td>qwen2.5:3b</td><td>20–35 s</td></tr>
+  </table>
+  </div>
+
+  <div class="callout note">
+    Los tiempos indicados son aproximados para una consulta de complejidad media (4–8 oraciones
+    de respuesta). Consultas simples son más rápidas; consultas sobre documentos extensos indexados
+    pueden ser más lentas.
+  </div>
+
+</section>
+
+<!-- ============================================================ SECCIÓN 5: INSTALACIÓN DE PLUGINS -->
+<div class="page-break"></div>
+<section id="s5">
+  <h1 class="section-h1">5. Instalación de plugins en Moodle</h1>
+
+  <p>
+    Los plugins de SAIPA se instalan desde el panel de administración de Moodle de forma estándar,
+    cargando los archivos ZIP de cada plugin.
+  </p>
+
+  <div class="callout warn">
+    <strong>Advertencia:</strong> Instalar primero <code>local_saipa</code> y luego <code>block_saipa</code>. El bloque declara una dependencia de <code>local_saipa</code> y no se activará si el plugin local no está instalado previamente.
+  </div>
+
+  <h2 id="s5-1" class="section-h2">5.1 Instalación de local_saipa</h2>
+
+  <ol class="steps">
+    <li>Iniciar sesión en Moodle como administrador del sitio.</li>
+    <li>Navegar a <strong>Administración del sitio → Plugins → Instalar plugins</strong>.</li>
+    <li>Arrastrar o cargar el archivo <code>local_saipa-0.5.0.zip</code>.</li>
+    <li>Hacer clic en <strong>Instalar plugin desde archivo ZIP</strong> y confirmar la validación.</li>
+    <li>En la pantalla de actualización de base de datos, revisar que aparezcan los pasos de instalación sin errores y hacer clic en <strong>Continuar</strong>.</li>
+    <li>Verificar que la versión indicada sea <code>2026032402</code>.</li>
+  </ol>
+
+  <div class="callout note">
+    <strong>Nota:</strong> Durante la instalación, Moodle ejecuta el script <code>db/install.php</code> que crea las tablas <code>saipa_interactions</code>, <code>saipa_telegram_links</code> y <code>saipa_phone_verify</code>, genera automáticamente el secreto HMAC para Telegram y registra los proveedores de mensajes internos de Moodle.
+  </div>
+
+  <h2 id="s5-2" class="section-h2">5.2 Instalación de block_saipa</h2>
+
+  <ol class="steps">
+    <li>Repetir el proceso de carga, esta vez con el archivo <code>block_saipa-0.5.0.zip</code>.</li>
+    <li>Confirmar la instalación. La pantalla debe indicar que la dependencia <code>local_saipa</code> está satisfecha.</li>
+    <li>Verificar que la versión indicada sea <code>2026032402</code>.</li>
+  </ol>
+
+  <figure>
+    <div class="mermaid">
+flowchart LR
+  A["Descargar ZIPs\nlocal_saipa + block_saipa"] --> B["Admin → Plugins\n→ Instalar plugins"]
+  B --> C["Cargar local_saipa.zip\n→ Instalar"]
+  C --> D["Ejecutar actualización\nde BD (install.php)"]
+  D --> E["Cargar block_saipa.zip\n→ Instalar"]
+  E --> F["Verificar dependencias\n✓ local_saipa presente"]
+  F --> G["Instalación completa"]
+    </div>
+    <figcaption>Figura 3. Flujo de instalación de plugins en Moodle.</figcaption>
+  </figure>
+
+  <h2 id="s5-3" class="section-h2">5.3 Verificación del estado de plugins</h2>
+  <p>
+    Ir a <strong>Administración del sitio → Plugins → Vista general de plugins</strong> y confirmar
+    que los dos plugins aparecen con estado <span style="color:green;font-weight:700;">Activado</span>
+    y sin advertencias de versión ni dependencias faltantes.
+  </p>
+
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Plugin</th><th>Tipo</th><th>Versión esperada</th><th>Directorio</th></tr>
+    <tr><td>SAIPA (local_saipa)</td><td>local</td><td>2026032402 / 0.5.0</td><td><code>/local/saipa/</code></td></tr>
+    <tr><td>SAIPA Assistant (block_saipa)</td><td>block</td><td>2026032402 / 0.5.0</td><td><code>/blocks/saipa/</code></td></tr>
+  </table>
+  </div>
+
+  <p>SAIPA crea las siguientes tablas en la base de datos de Moodle:</p>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Tabla</th><th>Propósito</th></tr>
+    <tr><td><code>saipa_interactions</code></td><td>Historial de conversaciones usuario–asistente. Incluye timestamp, course_id, rol (user/assistant) y texto.</td></tr>
+    <tr><td><code>saipa_telegram_links</code></td><td>Vinculación entre usuarios Moodle y cuentas Telegram. Almacena el <code>telegram_id</code>, nombre de usuario, token HMAC y estado de confirmación.</td></tr>
+    <tr><td><code>saipa_phone_verify</code></td><td>Proceso de verificación OTP de WhatsApp. Almacena número de teléfono (en texto plano hasheado), OTP, expiración y estado.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 9. Tablas de base de datos creadas por SAIPA.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ SECCIÓN 6: CONFIGURACIÓN EN MOODLE -->
+<div class="page-break"></div>
+<section id="s6">
+  <h1 class="section-h1">6. Configuración en Moodle</h1>
+
+  <h2 id="s6-1" class="section-h2">6.1 Ajustes generales de SAIPA</h2>
+  <p>
+    Ir a <strong>Administración del sitio → Plugins → Local → SAIPA</strong> para acceder al panel
+    de configuración de <code>local_saipa</code>. Los parámetros principales son:
+  </p>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Ajuste</th><th>Valor recomendado</th><th>Descripción</th></tr>
+    <tr><td>URL del motor</td><td><code>https://saipa.universidad.edu</code></td><td>URL base del saipa-engine, accesible desde el servidor Moodle. Debe incluir el esquema HTTPS.</td></tr>
+    <tr><td>Secreto de API</td><td><em>(pegar valor de <code>SAIPA_API_SECRET</code>)</em></td><td>Debe coincidir exactamente con la variable de entorno del engine.</td></tr>
+    <tr><td>Canal de mensajería</td><td><code>Telegram</code>, <code>WhatsApp</code> o <code>Ambos</code></td><td>Controla qué paneles de vinculación son visibles para los alumnos. Seleccionar <code>Ninguno</code> para desactivar la mensajería.</td></tr>
+    <tr><td>Nivel de riesgo crítico</td><td><code>70</code></td><td>Porcentaje de riesgo de abandono a partir del cual SAIPA activa alertas proactivas.</td></tr>
+    <tr><td>Habilitar indexación automática</td><td>Habilitado</td><td>Re-indexa el contenido del curso cada vez que el docente publica material nuevo.</td></tr>
+    <tr><td>Días de ventana de riesgo</td><td><code>14</code></td><td>Período en días para el cálculo de indicadores de actividad.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 7. Ajustes de configuración en Moodle (local_saipa).</figcaption>
+  </figure>
+
+  <h2 id="s6-2" class="section-h2">6.2 Habilitación del servicio web externo</h2>
+  <p>
+    Los módulos AMD del bloque (<code>chat.js</code>, <code>telegram.js</code>,
+    <code>whatsapp.js</code>) se comunican con el plugin local mediante el mecanismo de servicios
+    web de Moodle. Este mecanismo debe estar habilitado para el funcionamiento del bloque:
+  </p>
+
+  <ol class="steps">
+    <li>Ir a <strong>Administración del sitio → Servidor → Servicios web → Vista general</strong>.</li>
+    <li>Verificar que <strong>Habilitar servicios web</strong> esté activado.</li>
+    <li>Verificar que <strong>Habilitar protocolo REST</strong> esté activado.</li>
+    <li>Ir a <strong>Servicios externos</strong> y confirmar que el servicio <em>SAIPA External Service</em> está habilitado y tiene todas las funciones requeridas.</li>
+  </ol>
+
+  <div class="callout note">
+    <strong>Nota:</strong> El servicio <em>SAIPA External Service</em> se crea automáticamente durante la instalación del plugin. No es necesario crear tokens de usuario: el bloque usa autenticación de sesión Moodle (<code>sesskey</code>), no tokens estáticos.
+  </div>
+
+  <h2 id="s6-3" class="section-h2">6.3 Agregar el bloque SAIPA a los cursos</h2>
+  <p>
+    El administrador puede agregar el bloque a todos los cursos de forma masiva mediante la
+    función de bloque predeterminado, o bien los docentes pueden agregarlo individualmente en sus
+    propios cursos:
+  </p>
+  <ul>
+    <li><strong>Método masivo (administrador):</strong> Ir a <strong>Administración del sitio → Apariencia → Bloques predeterminados</strong> y agregar el bloque <em>SAIPA Assistant</em> a la región lateral. Todos los cursos existentes y nuevos mostrarán el bloque automáticamente.</li>
+    <li><strong>Método individual (docente):</strong> Dentro del curso, activar el modo de edición, seleccionar <strong>Agregar un bloque</strong> en la región lateral y elegir <em>SAIPA Assistant</em>.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 7: TELEGRAM -->
+<div class="page-break"></div>
+<section id="s7">
+  <h1 class="section-h1">7. Configuración del canal Telegram</h1>
+
+  <div class="callout note">
+    <strong>Nota:</strong> Esta sección es completamente opcional. Solo debe ejecutarse si la institución decidió activar el canal Telegram en la configuración de <em>Canal de mensajería</em>.
+  </div>
+
+  <h2 id="s7-1" class="section-h2">7.1 Creación del bot con BotFather</h2>
+
+  <ol class="steps">
+    <li>Abrir Telegram e iniciar una conversación con <code>@BotFather</code>.</li>
+    <li>Enviar el comando <code>/newbot</code> y seguir las instrucciones: asignar un nombre visible (por ejemplo, «Asistente SAIPA — Universidad X») y un nombre de usuario único que termine en <code>bot</code> (por ejemplo, <code>SaipaUniversidadBot</code>).</li>
+    <li>BotFather devolverá el <strong>token del bot</strong> con el formato <code>123456789:ABCDefGHIjklmNopqRSTUvwxyz</code>. Copiar este valor en la variable <code>TELEGRAM_BOT_TOKEN</code> del archivo <code>.env</code>.</li>
+    <li>Anotar el nombre de usuario del bot (sin <code>@</code>) y copiarlo en <code>TELEGRAM_BOT_USERNAME</code>.</li>
+    <li>Enviar <code>/setdescription</code> a BotFather y agregar una descripción institucional breve.</li>
+    <li>Enviar <code>/setcommands</code> y configurar los comandos mínimos:
+      <pre><code>start - Conectar con SAIPA
+desconectar - Desvincular esta cuenta de Moodle</code></pre>
+    </li>
+  </ol>
+
+  <h2 id="s7-2" class="section-h2">7.2 Registro del webhook</h2>
+  <p>
+    A diferencia de los bots en modo polling, SAIPA utiliza un <strong>webhook</strong>: Telegram
+    envía cada mensaje recibido a una URL HTTPS del engine. El webhook se registra automáticamente
+    cuando el engine inicia, siempre que la variable <code>TELEGRAM_WEBHOOK_URL</code> esté
+    configurada en el <code>.env</code>.
+  </p>
+  <p>Para verificar que el webhook se registró correctamente, navegar a la página de estado:</p>
+  <pre><code>https://moodle.universidad.edu/local/saipa/status.php</code></pre>
+  <p>El ítem <em>Telegram bot</em> debe aparecer en verde con el mensaje <em>Webhook activo</em>.</p>
+  <p>Alternativamente, se puede verificar manualmente con la API de Telegram:</p>
+  <pre><code>curl https://api.telegram.org/bot{TOKEN}/getWebhookInfo</code></pre>
+  <p>La respuesta debe incluir <code>"url": "https://saipa.universidad.edu/api/telegram/webhook"</code> y <code>"pending_update_count": 0</code>.</p>
+
+  <h2 id="s7-3" class="section-h2">7.3 Flujo de vinculación del alumno</h2>
+
+  <figure>
+    <div class="mermaid">
+sequenceDiagram
+  actor Alumno
+  participant Moodle
+  participant Engine as saipa-engine
+  participant TG as Telegram
+
+  Alumno->>Moodle: Clic en "Vincular mi Telegram"
+  Moodle->>Moodle: Genera token HMAC-SHA256 (15 min)
+  Moodle-->>Alumno: Deep-link t.me/Bot?start=TOKEN
+  Alumno->>TG: Abre deep-link en Telegram
+  TG->>Engine: POST /telegram/webhook {/start TOKEN}
+  Engine->>Moodle: POST local_saipa_telegram_confirm_link
+  Moodle->>Moodle: Valida HMAC, vincula telegram_id
+  Engine-->>TG: "✅ Cuenta vinculada con Moodle"
+  Moodle-->>Alumno: Panel actualizado (polling cada 3 s)
+    </div>
+    <figcaption>Figura 4. Flujo de vinculación de cuenta Telegram.</figcaption>
+  </figure>
+
+  <p>
+    El alumno recibe un enlace de un solo uso, válido por 15 minutos, firmado con HMAC-SHA256.
+    Al abrirlo en Telegram, el bot confirma automáticamente la vinculación llamando de vuelta a
+    Moodle. El panel del bloque se actualiza mediante <em>polling</em> cada 3 segundos y se detiene
+    automáticamente cuando la vinculación se confirma o expira el plazo.
+  </p>
+</section>
+
+<!-- ============================================================ SECCIÓN 8: WHATSAPP -->
+<div class="page-break"></div>
+<section id="s8">
+  <h1 class="section-h1">8. Configuración del canal WhatsApp</h1>
+
+  <div class="callout note">
+    <strong>Nota:</strong> Esta sección es opcional y debe ejecutarse solo si la institución activa el canal WhatsApp. Se utiliza <strong>Evolution API</strong> (basada en Baileys) para el entorno de desarrollo y producción inicial. Para entornos enterprise con alto volumen de mensajes, Schaller &amp; Ponce provee integración con la Meta Cloud API (WhatsApp Business Platform oficial) como parte de la versión 1.1.
+  </div>
+
+  <h2 id="s8-1" class="section-h2">8.1 Instalación de Evolution API</h2>
+  <p>
+    Evolution API está incluida como servicio opcional en el <code>docker-compose.prod.yml</code>.
+    Para activarla, descomentar el servicio <code>evolution-api</code> en el archivo Compose y
+    configurar el archivo <code>evolution.env</code>:
+  </p>
+  <pre><code>cp evolution.env.example evolution.env
+nano evolution.env
+# Configurar AUTHENTICATION_API_KEY con una clave segura
+# Copiar esa misma clave en EVOLUTION_API_KEY en el .env principal
+
+docker compose -f docker-compose.prod.yml up -d evolution-api</code></pre>
+
+  <h2 id="s8-2" class="section-h2">8.2 Vinculación del número de WhatsApp</h2>
+  <ol class="steps">
+    <li>Una vez que el contenedor <code>evolution-api</code> esté corriendo, acceder a la interfaz de administración en <code>http://localhost:8080</code> (o mediante un túnel seguro).</li>
+    <li>Crear una nueva instancia con el nombre configurado en <code>EVOLUTION_INSTANCE_NAME</code> (por defecto <code>saipa-wa</code>).</li>
+    <li>Seleccionar la instancia y hacer clic en <strong>Conectar</strong>. Aparecerá un código QR.</li>
+    <li>Abrir WhatsApp en el teléfono institucional, ir a <strong>Dispositivos vinculados</strong> y escanear el código QR.</li>
+    <li>El estado de la instancia cambiará a <strong>CONNECTED</strong>. Desde este momento, el número está operativo para enviar y recibir mensajes.</li>
+  </ol>
+  <div class="callout warn">
+    <strong>Advertencia:</strong> El número de WhatsApp vinculado debe ser un número dedicado exclusivamente a SAIPA. Vincular un número personal o que ya se usa en otro dispositivo causará la desconexión de ese dispositivo.
+  </div>
+
+  <h2 id="s8-3" class="section-h2">8.3 Flujo de verificación OTP del alumno</h2>
+
+  <figure>
+    <div class="mermaid">
+sequenceDiagram
+  actor Alumno
+  participant Moodle
+  participant Engine as saipa-engine
+  participant WA as WhatsApp (Evolution API)
+
+  Alumno->>Moodle: Ingresa número (ej. 5491112345678) y clic "Enviar código"
+  Moodle->>Moodle: Genera OTP 6 dígitos, guarda en saipa_phone_verify (10 min)
+  Moodle->>Engine: POST /whatsapp/send_otp {phone, otp}
+  Engine->>WA: sendMessage(phone, "🔐 Tu código es 123456")
+  WA-->>Alumno: Mensaje WhatsApp con el código
+  Alumno->>Moodle: Ingresa código → clic "Verificar"
+  Moodle->>Moodle: Valida OTP, marca número como verificado
+  Moodle-->>Alumno: Panel actualizado: "Número verificado"
+    </div>
+    <figcaption>Figura 5. Flujo de verificación OTP por WhatsApp.</figcaption>
+  </figure>
+
+  <h2 id="s8-4" class="section-h2">8.4 Comparativa de canales de mensajería</h2>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Criterio</th><th>Telegram</th><th>WhatsApp</th></tr>
+    <tr><td>Costo de uso</td><td>Gratuito sin límites</td><td>Gratuito en el primer año (Meta), luego por conversación</td></tr>
+    <tr><td>Aprobación previa</td><td>No (bot instantáneo)</td><td>Sí, para Meta Cloud API (proceso de 1-4 semanas)</td></tr>
+    <tr><td>Número de teléfono dedicado</td><td>No requerido</td><td>Requerido</td></tr>
+    <tr><td>Penetración en Latinoamérica</td><td>Alta (Argentina, Bolivia, Venezuela)</td><td>Muy alta (todos los países)</td></tr>
+    <tr><td>Complejidad de instalación</td><td>Baja</td><td>Media</td></tr>
+    <tr><td>Recomendación inicial</td><td><span class="badge ok">Primaria</span></td><td><span class="badge soft">Complementaria</span></td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 8. Comparativa de canales de mensajería disponibles en SAIPA.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ SECCIÓN 9: VERIFICACIÓN POST-INSTALACIÓN -->
+<div class="page-break"></div>
+<section id="s9">
+  <h1 class="section-h1">9. Verificación post-instalación</h1>
+
+  <h2 id="s9-1" class="section-h2">9.1 Página de estado (status.php)</h2>
+  <p>
+    SAIPA provee una página de diagnóstico accesible únicamente para administradores del sitio:
+  </p>
+  <pre><code>https://moodle.universidad.edu/local/saipa/status.php</code></pre>
+  <p>
+    La página ejecuta once verificaciones en tiempo real y muestra el resultado con indicadores de
+    color (verde / amarillo / rojo):
+  </p>
+  <ol>
+    <li>Conectividad con el motor (saipa-engine)</li>
+    <li>Respuesta de Ollama y modelo cargado</li>
+    <li>Respuesta de ChromaDB</li>
+    <li>Secreto de API configurado</li>
+    <li>Canal de mensajería configurado</li>
+    <li>Estado del webhook de Telegram (si el canal está activo)</li>
+    <li>Estado de Evolution API / WhatsApp (si el canal está activo)</li>
+    <li>Tablas de base de datos presentes</li>
+    <li>Servicio web externo habilitado</li>
+    <li>Permisos del directorio de archivos temporales</li>
+    <li>Licencia válida y activa</li>
+  </ol>
+
+  <figure>
+    <div style="background:var(--gray1);border:1px solid var(--gray2);border-radius:6px;padding:16px;margin:10px 0;">
+      <p style="font-size:9pt;color:var(--gray3);font-family:monospace;margin-bottom:10px;">status.php — Panel de diagnóstico SAIPA</p>
+      <table style="width:100%;border-collapse:collapse;font-size:9pt;">
+        <tr><td style="padding:4px 8px;">&#9989; Motor SAIPA (saipa-engine)</td><td style="color:green;">Conectado — v0.5.0</td></tr>
+        <tr style="background:#f9f9f9;"><td style="padding:4px 8px;">&#9989; Ollama (qwen2.5:14b-16k)</td><td style="color:green;">Cargado — listo</td></tr>
+        <tr><td style="padding:4px 8px;">&#9989; ChromaDB</td><td style="color:green;">Disponible</td></tr>
+        <tr style="background:#f9f9f9;"><td style="padding:4px 8px;">&#9989; Secreto de API</td><td style="color:green;">Configurado</td></tr>
+        <tr><td style="padding:4px 8px;">&#9989; Canal de mensajería</td><td style="color:green;">Telegram</td></tr>
+        <tr style="background:#f9f9f9;"><td style="padding:4px 8px;">&#9989; Telegram webhook</td><td style="color:green;">Activo — 0 mensajes pendientes</td></tr>
+        <tr><td style="padding:4px 8px;">&#9989; Tablas de BD</td><td style="color:green;">Presentes (3/3)</td></tr>
+        <tr style="background:#f9f9f9;"><td style="padding:4px 8px;">&#9989; Servicio web externo</td><td style="color:green;">Habilitado</td></tr>
+        <tr><td style="padding:4px 8px;">&#9989; Licencia</td><td style="color:green;">Válida hasta 2027-03-19</td></tr>
+      </table>
+    </div>
+    <figcaption>Figura 6. Ejemplo de la página de estado SAIPA con todos los checks en verde.</figcaption>
+  </figure>
+
+  <h2 id="s9-2" class="section-h2">9.2 Prueba integral del asistente</h2>
+  <ol class="steps">
+    <li>Ingresar a Moodle como un usuario <strong>alumno</strong> en un curso que tenga el bloque SAIPA.</li>
+    <li>Escribir una pregunta sobre el contenido del curso en el chat del bloque.</li>
+    <li>Verificar que el asistente responde en menos de 15 segundos con contenido coherente.</li>
+    <li>Ingresar como <strong>docente</strong> y verificar que el panel «Alumnos en riesgo» muestra el indicador de la sesión de prueba.</li>
+  </ol>
+
+  <h2 id="s9-3" class="section-h2">9.3 Indexación del primer curso</h2>
+  <p>
+    Antes de que SAIPA pueda responder preguntas sobre un curso, el contenido debe ser indexado en
+    la base vectorial. El bloque muestra el botón <strong>Indexar curso</strong> a los docentes y
+    administradores.
+  </p>
+  <p>
+    La indexación puede demorar entre 30 segundos y varios minutos dependiendo del volumen de
+    contenido. Una vez finalizada, el botón queda deshabilitado y el asistente está listo para
+    responder consultas sobre ese curso.
+  </p>
+  <div class="callout note">
+    <strong>Nota:</strong> La indexación automática (si está habilitada en los ajustes) re-indexa el curso cada vez que el docente publica, edita o elimina material. No es necesario realizar una re-indexación manual para mantener el contenido actualizado.
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 10: NGINX / TLS -->
+<div class="page-break"></div>
+<section id="s10">
+  <h1 class="section-h1">10. Configuración de Nginx y TLS</h1>
+
+  <h2 id="s10-1" class="section-h2">10.1 Estructura de virtualhost recomendada</h2>
+
+  <figure>
+    <div class="mermaid">
+graph TB
+  I["Internet\n(HTTPS :443)"] --> NX["Nginx\n(TLS termination)"]
+  NX -->|proxy_pass :8000| ENG["saipa-engine\nFastAPI"]
+  NX2["Nginx (Moodle host)"] --> MD["Moodle PHP-FPM"]
+  I --> NX2
+    </div>
+    <figcaption>Figura 7. Capas de Nginx y terminación TLS para Moodle y el engine SAIPA.</figcaption>
+  </figure>
+
+  <p>
+    Se recomienda usar un subdominio dedicado para el engine (por ejemplo,
+    <code>saipa.universidad.edu</code>), separado del dominio principal de Moodle. El archivo de
+    configuración base de Nginx para el engine se incluye en el paquete como
+    <code>nginx/saipa.conf.example</code>. Sus elementos clave son:
+  </p>
+
+  <pre><code>server {
+    listen 443 ssl http2;
+    server_name saipa.universidad.edu;
+
+    ssl_certificate     /etc/letsencrypt/live/saipa.universidad.edu/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/saipa.universidad.edu/privkey.pem;
+
+    # Solo permite tráfico desde el servidor Moodle y Telegram
+    allow 203.0.113.10;   # IP del servidor Moodle
+    allow 91.108.0.0/16;  # Rango de IPs de Telegram
+    deny all;
+
+    location / {
+        proxy_pass         http://localhost:8000;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_read_timeout 120s;
+    }
+}
+
+server {
+    listen 80;
+    server_name saipa.universidad.edu;
+    return 301 https://$host$request_uri;
+}</code></pre>
+
+  <div class="callout warn">
+    <strong>Advertencia:</strong> La directiva <code>allow</code> / <code>deny</code> de Nginx es una medida de defensa en profundidad, pero no reemplaza al firewall del sistema operativo. Configurar también <code>ufw</code> (o <code>iptables</code>) para restringir el puerto 8000 al tráfico local.
+  </div>
+
+  <h2 id="s10-2" class="section-h2">10.2 Obtención de certificado con Certbot</h2>
+
+  <ol class="steps">
+    <li>Instalar Certbot: <code>sudo apt install certbot python3-certbot-nginx</code></li>
+    <li>Obtener certificado: <code>sudo certbot --nginx -d saipa.universidad.edu</code></li>
+    <li>Certbot modifica automáticamente la configuración de Nginx y programa la renovación automática.</li>
+    <li>Verificar la renovación automática: <code>sudo certbot renew --dry-run</code></li>
+  </ol>
+
+  <h2 id="s10-3" class="section-h2">10.3 Consideraciones de seguridad de red</h2>
+  <ul>
+    <li>El webhook de Telegram solo acepta conexiones desde los rangos de IP de Telegram (publicados en la documentación oficial de la API de bots de Telegram).</li>
+    <li>Verificar que el header <code>X-Telegram-Bot-Api-Secret-Token</code> de los webhooks entrantes coincide con <code>TELEGRAM_WEBHOOK_SECRET</code> antes de procesar el mensaje.</li>
+    <li>El tráfico entre Moodle y el engine (para las llamadas REST) debe realizarse siempre sobre HTTPS, incluso si ambos servidores están en la misma red privada.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 11: ACTUALIZACIONES -->
+<div class="page-break"></div>
+<section id="s11">
+  <h1 class="section-h1">11. Actualizaciones de versión</h1>
+
+  <h2 id="s11-1" class="section-h2">11.1 Actualización del engine</h2>
+
+  <div class="callout warn">
+    <strong>Advertencia:</strong> Leer siempre el archivo <code>CHANGELOG.md</code> del paquete nuevo antes de actualizar. Algunas actualizaciones pueden requerir ajustes en el <code>.env</code> o migraciones de la base vectorial.
+  </div>
+
+  <pre><code># 1. Detener el engine
+cd /opt/saipa-engine
+docker compose -f docker-compose.prod.yml down
+
+# 2. Hacer copia de seguridad de los volúmenes críticos
+docker run --rm -v saipa_chroma_data:/data -v $(pwd)/backups:/backup \
+  alpine tar czf /backup/chroma-$(date +%Y%m%d).tar.gz -C /data .
+
+# 3. Reemplazar los archivos del engine con la nueva versión
+tar -xzf saipa-engine-X.Y.Z.tar.gz -C /tmp/
+rsync -av --exclude='.env' --exclude='evolution.env' \
+  /tmp/saipa-engine-X.Y.Z/ /opt/saipa-engine/
+
+# 4. Reiniciar
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d</code></pre>
+
+  <h2 id="s11-2" class="section-h2">11.2 Actualización de los plugins</h2>
+  <ol class="steps">
+    <li>Descargar los nuevos archivos ZIP de los plugins.</li>
+    <li>En Moodle, ir a <strong>Administración del sitio → Notificaciones</strong>. Moodle detectará la nueva versión si se copian los archivos directamente al directorio de plugins, o bien usar la instalación desde ZIP como en la instalación inicial.</li>
+    <li>Seguir el asistente de actualización y ejecutar los scripts de migración de base de datos.</li>
+    <li>Verificar la página de estado después de la actualización.</li>
+  </ol>
+
+  <h2 id="s11-3" class="section-h2">11.3 Compatibilidad entre versiones</h2>
+  <p>
+    La versión de <code>block_saipa</code> debe ser igual a la de <code>local_saipa</code>. No es
+    posible mezclar versiones distintas entre los dos plugins. La versión del engine es compatible
+    con plugins cuya versión mayor (primer número) sea igual. Por ejemplo, el engine <code>0.5.x</code>
+    es compatible con plugins <code>0.5.x</code> pero no con <code>0.4.x</code> ni <code>0.6.x</code>.
+  </p>
+</section>
+
+<!-- ============================================================ SECCIÓN 12: MOODLE < 4 -->
+<div class="page-break"></div>
+<section id="s12">
+  <h1 class="section-h1">12. Migración desde Moodle anterior a 4.0</h1>
+
+  <div class="callout warn">
+    <strong>Advertencia:</strong> SAIPA requiere Moodle 4.4 o superior. Si la institución opera una versión anterior, se debe completar la actualización de Moodle <em>antes</em> de instalar SAIPA.
+  </div>
+
+  <h2 id="s12-1" class="section-h2">12.1 Ruta de actualización de Moodle</h2>
+  <p>
+    Moodle no permite saltos de versión de más de dos versiones mayores en una sola operación. La
+    ruta de actualización recomendada depende de la versión actual:
+  </p>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Versión actual</th><th>Ruta de actualización</th></tr>
+    <tr><td>3.9 o anterior</td><td>3.9 → 3.11 → 4.1 → 4.4</td></tr>
+    <tr><td>3.11</td><td>3.11 → 4.1 → 4.4</td></tr>
+    <tr><td>4.0 o 4.1</td><td>4.1 → 4.4</td></tr>
+    <tr><td>4.2 o 4.3</td><td>Actualización directa a 4.4</td></tr>
+  </table>
+  </div>
+
+  <h2 id="s12-2" class="section-h2">12.2 Consideraciones previas a la actualización de Moodle</h2>
+  <ul>
+    <li><strong>Copia de seguridad completa</strong>: Base de datos completa + directorio <code>moodledata</code> + directorio de instalación de Moodle.</li>
+    <li><strong>Compatibilidad de plugins existentes</strong>: Verificar en el directorio oficial de plugins de Moodle que todos los plugins instalados actualmente tienen versiones compatibles con Moodle 4.4.</li>
+    <li><strong>PHP 8.2</strong>: Moodle 4.4 requiere PHP 8.2. Planificar la actualización de PHP junto con la de Moodle.</li>
+    <li><strong>Tiempo de mantenimiento</strong>: Reservar una ventana de mantenimiento de al menos 2 horas para instituciones con bases de datos de tamaño medio.</li>
+    <li>Consultar la guía oficial de actualización de Moodle en la documentación pública de Moodle (disponible en <code>docs.moodle.org</code>) para el procedimiento paso a paso.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 13: TROUBLESHOOTING -->
+<div class="page-break"></div>
+<section id="s13">
+  <h1 class="section-h1">13. Resolución de problemas</h1>
+
+  <h2 id="s13-1" class="section-h2">13.1 Diagnóstico con la página de estado</h2>
+  <p>
+    Ante cualquier problema, el primer paso es acceder a la página de estado y identificar qué
+    verificación aparece en rojo o amarillo. Cada ítem fallido proporciona un mensaje de error
+    específico que orienta hacia la causa raíz.
+  </p>
+
+  <h2 id="s13-2" class="section-h2">13.2 Problemas frecuentes y soluciones</h2>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Síntoma</th><th>Causa probable</th><th>Solución</th></tr>
+    <tr>
+      <td>El chat no responde; la página de estado muestra <em>Motor no alcanzable</em></td>
+      <td>Engine detenido o URL incorrecta en la configuración</td>
+      <td>Verificar <code>docker compose ps</code> en el servidor del engine. Revisar la URL en los ajustes de local_saipa.</td>
+    </tr>
+    <tr>
+      <td>El asistente responde "No tengo información sobre este curso"</td>
+      <td>El curso no fue indexado</td>
+      <td>Como docente, hacer clic en el botón «Indexar curso» en el bloque SAIPA.</td>
+    </tr>
+    <tr>
+      <td>El tiempo de respuesta supera 30 segundos</td>
+      <td>Ollama corriendo en modo CPU sin GPU</td>
+      <td>Si el servidor tiene GPU NVIDIA, verificar que <code>nvidia-container-toolkit</code> está instalado y el servicio Ollama tiene acceso a GPU en el Compose.</td>
+    </tr>
+    <tr>
+      <td>El link de Telegram expira antes de que el alumno lo abra</td>
+      <td>El token de 15 minutos venció</td>
+      <td>Normal behavior. El alumno debe hacer clic en «Vincular mi Telegram» nuevamente para obtener un nuevo link.</td>
+    </tr>
+    <tr>
+      <td>El código OTP de WhatsApp no llega</td>
+      <td>Evolution API desconectada o número incorrecto</td>
+      <td>Verificar el estado de la instancia en la interfaz de Evolution API. Reconectar el QR si el estado es <code>DISCONNECTED</code>.</td>
+    </tr>
+    <tr>
+      <td>Error «Requires local_saipa» en el bloque</td>
+      <td>block_saipa instalado sin local_saipa</td>
+      <td>Instalar o habilitar local_saipa primero.</td>
+    </tr>
+    <tr>
+      <td>La página de estado muestra error de licencia</td>
+      <td>Vencimiento, sin conexión a Internet, o clave incorrecta</td>
+      <td>SAIPA tiene un período de gracia de 30 días sin conexión. Verificar la clave en los ajustes o contactar a Schaller &amp; Ponce.</td>
+    </tr>
+    <tr>
+      <td>Los módulos AMD (<code>chat.js</code>, etc.) no cargan</td>
+      <td>Caché de JavaScript de Moodle desactualizada</td>
+      <td>Ir a <strong>Administración del sitio → Desarrollo → Purgar todas las cachés</strong>.</td>
+    </tr>
+    <tr>
+      <td>Error de migración en la actualización del plugin</td>
+      <td>Pasos de <code>upgrade.php</code> fallidos</td>
+      <td>Revisar los logs de Moodle en <code>moodledata/moodle.log</code>. Asegurarse de que el usuario de BD tiene permisos de DDL (<code>CREATE TABLE</code>, <code>ALTER TABLE</code>).</td>
+    </tr>
+    <tr>
+      <td>Telegram webhook no activo</td>
+      <td><code>TELEGRAM_WEBHOOK_URL</code> no es HTTPS o no es accesible públicamente</td>
+      <td>Verificar que el subdominio tenga certificado válido y que Nginx esté corriendo. Registrar el webhook manualmente con la API de Telegram.</td>
+    </tr>
+  </table>
+  </div>
+  <figcaption>Tabla 10. Diagnóstico de problemas frecuentes en SAIPA.</figcaption>
+  </figure>
+
+  <h2 id="s13-3" class="section-h2">13.3 Comandos de mantenimiento</h2>
+
+  <figure>
+  <div class="table-wrapper">
+  <table class="std">
+    <tr><th>Comando</th><th>Propósito</th></tr>
+    <tr><td><code>docker compose -f docker-compose.prod.yml logs -f saipa-engine</code></td><td>Ver logs en tiempo real del engine.</td></tr>
+    <tr><td><code>docker compose -f docker-compose.prod.yml restart saipa-engine</code></td><td>Reiniciar solo el engine sin afectar Ollama ni ChromaDB.</td></tr>
+    <tr><td><code>docker compose -f docker-compose.prod.yml exec saipa-engine curl http://localhost:8000/health</code></td><td>Verificar salud del engine desde dentro del contenedor.</td></tr>
+    <tr><td><code>docker compose -f docker-compose.prod.yml exec ollama ollama list</code></td><td>Listar modelos descargados en Ollama.</td></tr>
+    <tr><td><code>curl https://api.telegram.org/bot{TOKEN}/getWebhookInfo</code></td><td>Verificar el estado del webhook de Telegram.</td></tr>
+    <tr><td><code>curl -X POST https://api.telegram.org/bot{TOKEN}/deleteWebhook</code></td><td>Eliminar el webhook (útil para depuración).</td></tr>
+    <tr><td><code>php /var/www/moodle/admin/cli/purge_caches.php</code></td><td>Purgar cachés de Moodle desde la línea de comandos.</td></tr>
+    <tr><td><code>php /var/www/moodle/admin/cli/upgrade.php</code></td><td>Ejecutar migraciones de BD de Moodle desde la línea de comandos.</td></tr>
+  </table>
+  </div>
+  <figcaption>Tabla 11. Comandos de mantenimiento de referencia rápida.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ SECCIÓN 14: SEGURIDAD Y PRIVACIDAD -->
+<div class="page-break"></div>
+<section id="s14">
+  <h1 class="section-h1">14. Seguridad y privacidad</h1>
+
+  <h2 id="s14-1" class="section-h2">14.1 Modelo de autenticación y autorización</h2>
+  <p>
+    SAIPA implementa múltiples capas de autenticación para proteger cada interfaz del sistema:
+  </p>
+  <ul>
+    <li>
+      <strong>Moodle → Engine (REST):</strong> Todas las llamadas desde los plugins de Moodle al
+      engine incluyen un header <code>Authorization: Bearer {SAIPA_API_SECRET}</code>. El engine
+      valida este token en cada solicitud. El secreto es generado con entropía criptográfica
+      (<code>openssl rand -hex 32</code>) y se almacena únicamente en el servidor, nunca en el
+      navegador del alumno.
+    </li>
+    <li>
+      <strong>Alumno → Moodle (AJAX):</strong> Los módulos AMD utilizan el mecanismo estándar de
+      servicios web de Moodle, que requiere un <code>sesskey</code> CSRF válido en cada petición.
+      No se emplean tokens de larga duración ni cookies adicionales.
+    </li>
+    <li>
+      <strong>Telegram → Engine (webhook):</strong> Cada mensaje entrante es validado comparando el
+      header <code>X-Telegram-Bot-Api-Secret-Token</code> con el valor de
+      <code>TELEGRAM_WEBHOOK_SECRET</code>. Los mensajes que no pasen esta validación son rechazados
+      con HTTP 403 antes de cualquier procesamiento.
+    </li>
+    <li>
+      <strong>Deep-link de Telegram:</strong> El token de vinculación está firmado con HMAC-SHA256
+      usando un secreto único por instalación. El token es de un solo uso y expira en 15 minutos.
+      Aunque un tercero intercepte el enlace, no puede usarlo para vincular otra cuenta.
+    </li>
+    <li>
+      <strong>WhatsApp OTP:</strong> El código de verificación es de 6 dígitos numéricos con
+      expiración de 10 minutos. Solo el número verificado puede recibir el código.
+    </li>
+    <li>
+      <strong>Licenciamiento:</strong> La clave de licencia es validada contra los servidores de
+      Schaller &amp; Ponce. En caso de ausencia de conectividad, el sistema opera en modo gracia
+      por hasta 30 días, garantizando la continuidad del servicio educativo ante interrupciones
+      temporales de Internet.
+    </li>
+  </ul>
+
+  <h2 id="s14-2" class="section-h2">14.2 Confidencialidad de datos de alumnos y docentes</h2>
+  <p>
+    SAIPA procesa información académica y de comportamiento de alumnos y docentes. El tratamiento
+    de estos datos debe enmarcarse en las políticas de privacidad institucionales y en la normativa
+    aplicable (Ley 25.326 de Protección de Datos Personales en Argentina, RGPD en Europa, o la
+    legislación local equivalente de cada institución).
+  </p>
+  <p>
+    Los principios de diseño que guían el manejo de datos en SAIPA son:
+  </p>
+  <ul>
+    <li>
+      <strong>Minimización de datos:</strong> SAIPA solo almacena los datos estrictamente necesarios
+      para su función. El historial de conversaciones registra el texto de los mensajes y metadatos
+      de contexto (curso, fecha, rol), pero no datos biométricos ni información sensible adicional.
+    </li>
+    <li>
+      <strong>Residencia de datos:</strong> Todos los datos —incluyendo el historial de conversaciones,
+      los índices vectoriales y los registros de Telegram/WhatsApp— residen en los servidores propios
+      de la institución. Ningún dato de alumnos o docentes es enviado a servidores de Schaller &amp;
+      Ponce ni a terceros, con excepción del tráfico de mensajes a través de las plataformas
+      Telegram y WhatsApp (sujeto a los términos de servicio de cada plataforma).
+    </li>
+    <li>
+      <strong>Moodle como sistema de identidad:</strong> SAIPA no mantiene una base de datos de
+      usuarios propia. La autenticación, los roles y la gestión de cuentas son competencia exclusiva
+      de Moodle. Las tablas de SAIPA solo almacenan identificadores de usuario (<code>userid</code>)
+      que referencian la tabla de usuarios de Moodle, siguiendo las convenciones de la plataforma.
+    </li>
+    <li>
+      <strong>Cifrado en tránsito:</strong> Toda comunicación entre el navegador del alumno, el
+      servidor Moodle y el motor SAIPA se realiza sobre TLS 1.2 o superior. No se permite tráfico
+      HTTP sin cifrar en producción.
+    </li>
+    <li>
+      <strong>Cifrado en reposo:</strong> SAIPA no gestiona el cifrado en reposo de la base de datos
+      de Moodle ni del almacenamiento Docker; estos deben ser configurados a nivel del sistema
+      operativo o del proveedor de infraestructura por el administrador de sistemas de la institución.
+    </li>
+    <li>
+      <strong>Derecho de supresión:</strong> El historial de conversaciones de un alumno puede ser
+      eliminado por un administrador mediante la función SQL estándar sobre las tablas de SAIPA.
+      La vinculación de Telegram o WhatsApp puede ser revocada por el propio alumno desde el bloque,
+      o por un administrador desde la base de datos.
+    </li>
+    <li>
+      <strong>Acceso por rol:</strong> Los indicadores de riesgo académico son visibles únicamente
+      para docentes y administradores del curso. Los alumnos no tienen acceso a los indicadores de
+      otros alumnos. Los datos de vinculación de mensajería de un alumno son visibles solo para
+      ese alumno y para los administradores del sitio.
+    </li>
+  </ul>
+  <div class="callout note">
+    <strong>Nota para administradores:</strong> Se recomienda incluir el uso de SAIPA en la
+    declaración de privacidad y los términos de uso de la plataforma Moodle institucional, informando
+    a los alumnos sobre el procesamiento de sus interacciones con el asistente y los canales de
+    mensajería disponibles.
+  </div>
+
+  <h2 id="s14-3" class="section-h2">14.3 Licenciamiento y validación</h2>
+  <p>
+    SAIPA es software propietario distribuido bajo licencia por Schaller &amp; Ponce. La licencia
+    es de tipo institucional, es decir, cubre a todos los usuarios de la institución contratante
+    sin límite de cantidad de alumnos ni de cursos.
+  </p>
+
+  <figure>
+    <div class="mermaid">
+flowchart LR
+  SAIPA["saipa-engine\n(inicio)"] -->|Valida licencia| LS["Servidor de licencias\nSchaller & Ponce"]
+  LS -->|OK| A["Operación normal"]
+  LS -->|Sin conexión| G["Modo gracia\n(30 días)"]
+  G -->|Superado 30 días| B["Advertencias\nen status.php"]
+  B -->|72h adicionales| C["Funcionalidad\nlimitada"]
+    </div>
+    <figcaption>Figura 8. Diagrama del proceso de evaluación y manejo de licencia.</figcaption>
+  </figure>
+
+  <ul>
+    <li>El engine valida la licencia al iniciar y una vez cada 24 horas en operación.</li>
+    <li>Si el servidor del engine no puede contactar al servidor de licencias, entra en <strong>modo gracia</strong> por 30 días, durante los cuales todas las funciones operan normalmente.</li>
+    <li>Transcurridos los 30 días sin validación, la página de estado mostrará advertencias pero el sistema continuará operando durante 72 horas adicionales para dar tiempo a resolver el problema de conectividad.</li>
+    <li>Para renovar o actualizar la licencia, contactar a Schaller &amp; Ponce en <code>dev@schaller-ponce.com.ar</code>.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 15: REFERENCIAS -->
+<div class="page-break"></div>
+<section id="s15">
+  <h1 class="section-h1">15. Referencias</h1>
+
+  <p>
+    Las referencias a continuación siguen el formato del <em>Institute of Electrical and Electronics
+    Engineers</em> (IEEE), edición 2024.
+  </p>
+
+  <ol style="list-style:none;padding:0;counter-reset:ieee-ref;">
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[1]</span>&ensp;Docker Inc.,
+      "Docker Engine overview," <em>Docker Documentation</em>, 2024. [Online]. Available:
+      <code>https://docs.docker.com/engine/</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[2]</span>&ensp;S. Ramírez (Tiangolo),
+      "FastAPI documentation," <em>FastAPI</em>, 2024. [Online]. Available:
+      <code>https://fastapi.tiangolo.com/</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[3]</span>&ensp;Moodle HQ,
+      "Moodle 4.4 release notes," <em>Moodle Documentation</em>, 2024. [Online]. Available:
+      <code>https://docs.moodle.org/404/en/Moodle_4.4_release_notes</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[4]</span>&ensp;Moodle HQ,
+      "Web services API," <em>Moodle Developer Documentation</em>, 2024. [Online]. Available:
+      <code>https://moodledev.io/docs/4.4/apis/subsystems/external/writing-a-service</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[5]</span>&ensp;Moodle HQ,
+      "Upgrading," <em>Moodle Documentation</em>, 2024. [Online]. Available:
+      <code>https://docs.moodle.org/en/Upgrading</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[6]</span>&ensp;Ollama,
+      "Ollama model library," <em>Ollama</em>, 2024. [Online]. Available:
+      <code>https://ollama.com/library</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[7]</span>&ensp;OWASP Foundation,
+      "OWASP Top Ten," <em>Open Web Application Security Project</em>, 2021. [Online]. Available:
+      <code>https://owasp.org/www-project-top-ten/</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[8]</span>&ensp;Schaller &amp; Ponce,
+      <em>SAIPA — Sistema de Asistencia Inteligente y Prevención del Abandono: documento técnico v0.4</em>.
+      Buenos Aires: Schaller &amp; Ponce Soluciones Educativas, 2026.
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[9]</span>&ensp;Telegram,
+      "Bots: An introduction for developers," <em>Telegram Developer Documentation</em>, 2024. [Online]. Available:
+      <code>https://core.telegram.org/bots</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[10]</span>&ensp;Telegram,
+      "Webhooks," <em>Telegram Bot API</em>, 2024. [Online]. Available:
+      <code>https://core.telegram.org/bots/webhooks</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[11]</span>&ensp;D. Q. Trung,
+      "Evolution API: WhatsApp API based on Baileys," <em>GitHub</em>, 2024. [Online]. Available:
+      <code>https://github.com/EvolutionAPI/evolution-api</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[12]</span>&ensp;Chroma,
+      "Chroma — The AI-native open-source embedding database," <em>Chroma</em>, 2024. [Online]. Available:
+      <code>https://www.trychroma.com/</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[13]</span>&ensp;Electronic Frontier Foundation,
+      "Certbot documentation," <em>Let's Encrypt</em>, 2024. [Online]. Available:
+      <code>https://certbot.eff.org/docs/</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[14]</span>&ensp;NGINX Inc.,
+      "NGINX reverse proxy," <em>NGINX Documentation</em>, 2024. [Online]. Available:
+      <code>https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/</code>. [Accessed: Mar. 2026].
+    </li>
+    <li style="margin-bottom:10px;padding-left:36px;text-indent:-36px;">
+      <span style="font-weight:700;color:var(--blue);">[15]</span>&ensp;República Argentina,
+      "Ley 25.326 de Protección de los Datos Personales," <em>Boletín Oficial</em>, Oct. 2000. [Online]. Available:
+      <code>https://servicios.infoleg.gob.ar/infolegInternet/anexos/60000-64999/64790/norma.htm</code>. [Accessed: Mar. 2026].
+    </li>
+  </ol>
+
+  <hr class="section-rule">
+  <p style="text-align:center;font-size:9pt;color:var(--gray3);margin-top:30px;">
+    SAIPA — Manual de Instalación v0.5.0 · Marzo 2026<br>
+    Schaller &amp; Ponce Soluciones Educativas con Inteligencia Artificial<br>
+    <em>dev@schaller-ponce.com.ar</em>
+  </p>
+</section>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      /* Nodos: fondo azul claro, texto azul oscuro → buen contraste */
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e3a8a',
+      primaryBorderColor: '#2557a7',
+      secondaryColor: '#dcfce7',
+      secondaryTextColor: '#14532d',
+      tertiaryColor: '#fef9c3',
+      tertiaryTextColor: '#713f12',
+      /* Aristas y etiquetas */
+      lineColor: '#374151',
+      edgeLabelBackground: '#f8fafc',
+      /* Subgrafos / clusters */
+      clusterBkg: '#f1f5f9',
+      clusterBorder: '#94a3b8',
+      titleColor: '#1e3a8a',
+      /* Diagramas de secuencia */
+      actorBkg: '#dbeafe',
+      actorTextColor: '#1e3a8a',
+      actorBorder: '#2557a7',
+      actorLineColor: '#6b7280',
+      signalColor: '#374151',
+      signalTextColor: '#1f2937',
+      labelBoxBkgColor: '#f1f5f9',
+      labelBoxBorderColor: '#94a3b8',
+      labelTextColor: '#1f2937',
+      loopTextColor: '#1f2937',
+      noteBkgColor: '#fef9c3',
+      noteTextColor: '#713f12',
+      activationBkgColor: '#dbeafe',
+      activationBorderColor: '#2557a7',
+      fontFamily: 'Segoe UI, Arial, sans-serif',
+      fontSize: '12px'
+    }
+  });
+</script>
+</body>
+</html>

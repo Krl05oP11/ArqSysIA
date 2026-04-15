@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAL-IA — Manual de Instalación v0.4.8</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  /* ---- Page setup ---- */
+  @page { size: A4; margin: 25mm 10mm 25mm 20mm; }
+  @media print {
+    .page-break  { page-break-before: always; }
+    nav, .no-print { display: none; }
+    body         { padding: 0; max-width: none; }
+    .table-wrapper { overflow-x: visible; }
+    pre            { overflow-x: visible; white-space: pre-wrap; word-break: break-all; }
+    table.std      { font-size: 8.5pt; }
+    table.std th   { font-size: 8pt; }
+    /* Evitar cortes en bloques atómicos */
+    table.std, figure, .mermaid, .callout, ol.steps li, pre {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1.section-h1, h2.section-h2, h3.section-h3, h4.section-h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+  }
+
+  :root {
+    --blue:   #1a3a6b;
+    --blue2:  #2557a7;
+    --teal:   #0d7377;
+    --purple: #5b2c83;
+    --gray1:  #f4f6fb;
+    --gray2:  #e8ecf4;
+    --gray3:  #b0bacf;
+    --black:  #1a1a2e;
+    --text:   #2c2c3e;
+    --warn:   #8b3a00;
+    --warn-bg:#fff4e6;
+    --note:   #003366;
+    --note-bg:#eaf2ff;
+    --ok:     #1a5c28;
+    --ok-bg:  #edfff2;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: var(--text);
+    background: #fff;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 0 10mm;
+  }
+
+  /* ---- Cover ---- */
+  #cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 96vh;
+    text-align: center;
+    border-bottom: 4px solid var(--purple);
+    padding: 20mm 0 15mm;
+    gap: 0;
+  }
+  #cover .logo-box {
+    width: 90px; height: 90px;
+    background: var(--purple);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(91,44,131,.25);
+  }
+  #cover .logo-box span {
+    color: #fff; font-size: 24pt; font-weight: 900; letter-spacing: -2px;
+  }
+  #cover h1 { font-size: 28pt; color: var(--purple); line-height: 1.15; margin-bottom: 6px; }
+  #cover h2 { font-size: 15pt; color: var(--teal); font-weight: 400; margin-bottom: 30px; }
+  #cover .tag {
+    display: inline-block;
+    background: var(--gray2); color: var(--purple);
+    padding: 4px 14px; border-radius: 20px;
+    font-size: 9pt; font-weight: 600; letter-spacing: .5px;
+    margin-bottom: 40px;
+  }
+  #cover table.meta { border-collapse: collapse; width: 320px; font-size: 9.5pt; }
+  #cover table.meta td { padding: 4px 10px; border-bottom: 1px solid var(--gray2); }
+  #cover table.meta td:first-child { color: var(--gray3); font-weight: 600; text-align: right; }
+  #cover .footer-note {
+    margin-top: auto; padding-top: 30px;
+    font-size: 8.5pt; color: var(--gray3);
+  }
+
+  /* ---- Headings ---- */
+  h1, h2, h3, h4, h5 { color: var(--blue); font-weight: 700; }
+  h1.section-h1 { font-size: 17pt; border-bottom: 3px solid var(--purple); padding-bottom: 6px; margin: 30px 0 14px; }
+  h2.section-h2 { font-size: 13pt; border-left: 4px solid var(--teal); padding-left: 10px; margin: 22px 0 10px; }
+  h3.section-h3 { font-size: 11pt; margin: 16px 0 8px; color: var(--blue2); }
+  h4.section-h4 { font-size: 10.5pt; margin: 12px 0 6px; color: var(--teal); }
+
+  /* ---- ToC ---- */
+  #toc h1 { font-size: 17pt; border-bottom: 3px solid var(--purple); padding-bottom: 6px; margin-bottom: 16px; }
+  #toc ol { list-style: none; padding: 0; counter-reset: toc-top; }
+  #toc > ol > li { counter-increment: toc-top; margin-bottom: 2px; }
+  #toc > ol > li::before { content: counter(toc-top) ". "; font-weight: 700; color: var(--purple); margin-right: 4px; }
+  #toc ol ol { padding-left: 22px; counter-reset: toc-sub; }
+  #toc ol ol li { counter-increment: toc-sub; }
+  #toc ol ol li::before { content: counter(toc-top) "." counter(toc-sub) ". "; font-weight: 400; color: var(--blue2); margin-right: 4px; }
+  #toc a { color: var(--text); text-decoration: none; }
+  #toc a:hover { text-decoration: underline; color: var(--blue2); }
+  #toc li { font-size: 10pt; padding: 2px 0; }
+  #toc > ol > li { font-size: 10.5pt; font-weight: 600; }
+
+  /* ---- Figures / Tables lists ---- */
+  .list-of { margin-bottom: 10px; }
+  .list-of h1 { font-size: 14pt; border-bottom: 2px solid var(--gray2); padding-bottom: 4px; margin-bottom: 10px; }
+  .list-of ol { list-style: none; padding: 0; }
+  .list-of li { font-size: 9.5pt; padding: 2px 0; display: flex; gap: 6px; }
+  .list-of li .label { color: var(--blue2); font-weight: 600; white-space: nowrap; }
+  .list-of li .dots { flex: 1; border-bottom: 1px dotted var(--gray3); margin-bottom: 3px; }
+  .list-of li .pg { color: var(--gray3); font-size: 9pt; white-space: nowrap; }
+
+  /* ---- Callouts ---- */
+  .callout { border-left: 4px solid; border-radius: 4px; padding: 10px 14px; margin: 14px 0; font-size: 9.5pt; }
+  .callout.note   { border-color: var(--blue2); background: var(--note-bg); color: var(--note); }
+  .callout.warn   { border-color: #d97706;      background: var(--warn-bg); color: var(--warn); }
+  .callout.ok     { border-color: #16a34a;      background: var(--ok-bg);   color: var(--ok); }
+  .callout strong { font-weight: 700; text-transform: uppercase; font-size: 8.5pt; letter-spacing: .5px; margin-right: 4px; }
+
+  /* ---- Code ---- */
+  pre, code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    background: var(--gray1);
+    border: 1px solid var(--gray2);
+    border-radius: 4px;
+  }
+  code { padding: 1px 5px; }
+  pre { padding: 12px 14px; overflow-x: auto; margin: 10px 0; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  .filename { font-size: 8.5pt; color: var(--gray3); font-family: monospace; margin-bottom: -4px; }
+
+  /* ---- Figures / tables ---- */
+  figure { margin: 16px 0; }
+  figure figcaption {
+    font-size: 9pt; color: var(--blue); font-style: italic; text-align: center;
+    margin-top: 6px;
+  }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--gray2); border-radius: 4px; }
+  figure.diagram figcaption { margin-top: 8px; }
+  .table-wrapper { overflow-x: auto; margin: 10px 0; }
+  table.std {
+    width: 100%; border-collapse: collapse; font-size: 9.5pt;
+  }
+  table.std th {
+    background: var(--purple); color: #fff;
+    padding: 7px 10px; text-align: left; font-size: 9pt;
+  }
+  table.std td { padding: 6px 10px; border-bottom: 1px solid var(--gray2); vertical-align: top; }
+  table.std tr:nth-child(even) td { background: var(--gray1); }
+  table.std code { font-size: 8.5pt; word-break: break-word; }
+
+  /* ---- Steps ---- */
+  ol.steps { list-style: none; counter-reset: step; padding: 0; }
+  ol.steps li { counter-increment: step; padding: 6px 0 6px 40px; position: relative; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 6px;
+    width: 26px; height: 26px;
+    background: var(--purple); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 9pt; font-weight: 700;
+  }
+
+  /* ---- Diagrams ---- */
+  .mermaid { background: var(--gray1); border: 1px solid var(--gray2); border-radius: 6px; padding: 16px; text-align: center; margin: 10px 0; }
+
+  /* ---- Inline badge ---- */
+  .badge {
+    display: inline-block;
+    font-size: 7.5pt; font-weight: 700;
+    padding: 1px 7px; border-radius: 10px;
+    vertical-align: middle; letter-spacing: .3px;
+    margin: 0 2px;
+  }
+  .badge.req  { background: #fde68a; color: #78350f; }
+  .badge.opt  { background: #bbf7d0; color: #14532d; }
+  .badge.port { background: #dbeafe; color: #1e3a8a; }
+  .badge.hard { background: #fee2e2; color: #991b1b; }
+  .badge.soft { background: #fef9c3; color: #713f12; }
+  .badge.saipa{ background: #e0e7ff; color: #3730a3; }
+
+  hr.section-rule { border: none; border-top: 2px solid var(--gray2); margin: 30px 0; }
+
+  p { margin-bottom: 8px; }
+  ul, ol { padding-left: 22px; margin-bottom: 8px; }
+  li { margin-bottom: 3px; }
+  a { color: var(--blue2); }
+
+  @media print {
+    body { counter-reset: page-count; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ PORTADA -->
+<section id="cover">
+  <div class="logo-box"><span>EI</span></div>
+  <h1>EVAL-IA</h1>
+  <h2>Evaluación Asistida por Inteligencia Artificial para Moodle</h2>
+  <span class="tag">MANUAL DE INSTALACIÓN — v0.4.8</span>
+
+  <table class="meta">
+    <tr><td>Versión</td><td><strong>0.4.8</strong> (build 2026041001)</td></tr>
+    <tr><td>Fecha</td><td>Abril 2026</td></tr>
+    <tr><td>Autores</td><td>Schaller &amp; Ponce</td></tr>
+    <tr><td>Contacto</td><td>dev@schaller-ponce.com.ar</td></tr>
+    <tr><td>Licencia</td><td>GNU GPL v3 o superior</td></tr>
+    <tr><td>Moodle</td><td>4.4 / 4.5 (API 2024042200+)</td></tr>
+  </table>
+
+  <p class="footer-note">
+    Documento complementario del <em>Manual de Instalación SAIPA</em>.<br>
+    Schaller &amp; Ponce — Soluciones Educativas con Inteligencia Artificial
+  </p>
+</section>
+
+<!-- ============================================================ TABLA DE CONTENIDOS -->
+<div class="page-break"></div>
+<section id="toc">
+  <h1>Tabla de Contenidos</h1>
+  <ol>
+    <li value="0"><a href="#s0">Escenarios de despliegue</a>
+      <ol>
+        <li><a href="#s0-a">Escenario A — EVAL-IA sobre engine SAIPA existente</a></li>
+        <li><a href="#s0-b">Escenario B — Despliegue nuevo del engine</a></li>
+        <li><a href="#s0-decision">Árbol de decisión</a></li>
+      </ol>
+    </li>
+    <li><a href="#s1">Introducción</a>
+      <ol>
+        <li><a href="#s1-1">Propósito y alcance</a></li>
+        <li><a href="#s1-2">Audiencia objetivo</a></li>
+        <li><a href="#s1-3">Relación con SAIPA</a></li>
+        <li><a href="#s1-4">Componentes del sistema</a></li>
+        <li><a href="#s1-5">Convenciones tipográficas</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Prerrequisitos</a>
+      <ol>
+        <li><a href="#s2-1">Infraestructura de hardware</a></li>
+        <li><a href="#s2-2">Software base</a></li>
+        <li><a href="#s2-3">Requisito del motor RAG (saipa-engine)</a></li>
+        <li><a href="#s2-4">Puertos de red</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Preparación del entorno</a>
+      <ol>
+        <li><a href="#s3-1">Verificación del motor existente</a></li>
+        <li><a href="#s3-2">Despliegue del motor desde cero</a></li>
+        <li><a href="#s3-3">Obtención del token de Moodle</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Instalación del plugin local_evalia</a>
+      <ol>
+        <li><a href="#s4-1">Descarga del paquete</a></li>
+        <li><a href="#s4-2">Instalación vía interfaz web</a></li>
+        <li><a href="#s4-3">Instalación vía CLI</a></li>
+        <li><a href="#s4-4">Verificación del estado del plugin</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Setup wizard de EVAL-IA</a>
+      <ol>
+        <li><a href="#s5-1">Acceso al asistente</a></li>
+        <li><a href="#s5-2">Pasos 1 a 7</a></li>
+        <li><a href="#s5-3">Resolución de errores del wizard</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Configuración en Moodle</a>
+      <ol>
+        <li><a href="#s6-1">Servicio web local_evalia</a></li>
+        <li><a href="#s6-2">Capacidades y roles</a></li>
+        <li><a href="#s6-3">Creación del categoría de calificaciones</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Indexación del primer curso</a>
+      <ol>
+        <li><a href="#s7-1">Requisitos del material</a></li>
+        <li><a href="#s7-2">Disparo manual de indexación</a></li>
+        <li><a href="#s7-3">Estado y reintento</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Flujo de trabajo EVAL-IA</a>
+      <ol>
+        <li><a href="#s8-1">Paso 1 — Generación de rúbrica con IA</a></li>
+        <li><a href="#s8-2">Paso 2 — Banco de preguntas</a></li>
+        <li><a href="#s8-3">Paso 3 — Exámenes únicos por estudiante</a></li>
+        <li><a href="#s8-4">Paso 4 — Corrección asistida por IA</a></li>
+        <li><a href="#s8-5">Paso 5 — Publicación en gradebook</a></li>
+        <li><a href="#s8-6">Paso 6 — Legajos y observaciones</a></li>
+        <li><a href="#s8-7">Asistente EVAL-IA (FAB del panel docente)</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Verificación post-instalación</a>
+      <ol>
+        <li><a href="#s9-1">Health check del engine</a></li>
+        <li><a href="#s9-2">Smoke test generación de rúbrica</a></li>
+        <li><a href="#s9-3">Smoke test corrección de ensayo</a></li>
+      </ol>
+    </li>
+    <li><a href="#s10">Actualizaciones de versión</a>
+      <ol>
+        <li><a href="#s10-1">Actualización del plugin</a></li>
+        <li><a href="#s10-2">Actualización del engine</a></li>
+        <li><a href="#s10-3">Compatibilidad entre versiones</a></li>
+      </ol>
+    </li>
+    <li><a href="#s11">Resolución de problemas</a>
+      <ol>
+        <li><a href="#s11-1">Diagnóstico con logs</a></li>
+        <li><a href="#s11-2">Problemas frecuentes</a></li>
+        <li><a href="#s11-3">Comandos de mantenimiento</a></li>
+      </ol>
+    </li>
+    <li><a href="#s12">Seguridad y privacidad</a>
+      <ol>
+        <li><a href="#s12-1">Datos procesados por EVAL-IA</a></li>
+        <li><a href="#s12-2">Privacy API de Moodle</a></li>
+        <li><a href="#s12-3">Licencia GPL v3</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">Referencias</a></li>
+  </ol>
+</section>
+
+<!-- ============================================================ LISTA DE FIGURAS -->
+<div class="page-break"></div>
+<section class="list-of">
+  <h1>Lista de Figuras</h1>
+  <ol>
+    <li><span class="label">Figura 1.</span><span class="dots"></span><span>Arquitectura de EVAL-IA sobre Moodle y saipa-engine</span></li>
+    <li><span class="label">Figura 2.</span><span class="dots"></span><span>Árbol de decisión de escenarios de despliegue</span></li>
+    <li><span class="label">Figura 3.</span><span class="dots"></span><span>Flujo completo de evaluación (6 pasos)</span></li>
+    <li><span class="label">Figura 4.</span><span class="dots"></span><span>Panel de indexación del curso</span></li>
+    <li><span class="label">Figura 5.</span><span class="dots"></span><span>Editor de rúbrica generada por IA</span></li>
+    <li><span class="label">Figura 6.</span><span class="dots"></span><span>Banco de preguntas con clasificación por tipo</span></li>
+    <li><span class="label">Figura 7.</span><span class="dots"></span><span>Panel de corrección asistida</span></li>
+    <li><span class="label">Figura 8.</span><span class="dots"></span><span>Legajo del estudiante con observaciones</span></li>
+    <li><span class="label">Figura 9.</span><span class="dots"></span><span>Gradebook de Moodle con ítem publicado</span></li>
+    <li><span class="label">Figura 10.</span><span class="dots"></span><span>Corrección de ensayo por IA con justificación</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ LISTA DE TABLAS -->
+<section class="list-of" style="margin-top: 24px;">
+  <h1>Lista de Tablas</h1>
+  <ol>
+    <li><span class="label">Tabla 1.</span><span class="dots"></span><span>Requisitos de hardware mínimos y recomendados</span></li>
+    <li><span class="label">Tabla 2.</span><span class="dots"></span><span>Software base requerido</span></li>
+    <li><span class="label">Tabla 3.</span><span class="dots"></span><span>Endpoints del engine utilizados por EVAL-IA</span></li>
+    <li><span class="label">Tabla 4.</span><span class="dots"></span><span>Tipos de preguntas soportados</span></li>
+    <li><span class="label">Tabla 5.</span><span class="dots"></span><span>Capacidades definidas por local_evalia</span></li>
+    <li><span class="label">Tabla 6.</span><span class="dots"></span><span>Web services registrados</span></li>
+    <li><span class="label">Tabla 7.</span><span class="dots"></span><span>Tablas de base de datos creadas</span></li>
+    <li><span class="label">Tabla 8.</span><span class="dots"></span><span>Diagnóstico de problemas frecuentes</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ SECCIÓN 0: ESCENARIOS -->
+<div class="page-break"></div>
+<section id="s0">
+  <h1 class="section-h1">0. Escenarios de despliegue</h1>
+
+  <p>
+    EVAL-IA es un plugin <code>local</code> de Moodle que depende funcionalmente de un motor
+    RAG (<code>saipa-engine</code>) para la generación de rúbricas, preguntas y la corrección
+    asistida por IA. La instalación varía según si ese motor ya está operando para el plugin
+    SAIPA o si debe desplegarse por primera vez.
+  </p>
+
+  <div class="callout note">
+    <strong>NOTA</strong>
+    EVAL-IA <em>no requiere</em> tener <code>local_saipa</code> instalado. Comparte únicamente el motor
+    Python. Si SAIPA ya está en producción, EVAL-IA reutiliza las mismas credenciales de
+    engine que SAIPA registró en la configuración global.
+  </div>
+
+  <h2 class="section-h2" id="s0-a">0.1 Escenario A — EVAL-IA sobre engine SAIPA existente</h2>
+  <p>
+    Es el camino más corto: la institución ya tiene <code>saipa-engine</code> levantado (con
+    Ollama, ChromaDB y, opcionalmente, XGBoost). Instalar EVAL-IA se reduce a tres pasos:
+  </p>
+  <ol class="steps">
+    <li>Verificar que el engine responde <code>/health</code> con <code>status: ok</code>.</li>
+    <li>Subir el ZIP de <code>local_evalia</code> via la pantalla <em>Installing plugins</em> de Moodle.</li>
+    <li>Completar el <em>Setup Wizard</em> de EVAL-IA (detecta automáticamente la config de SAIPA).</li>
+  </ol>
+
+  <h2 class="section-h2" id="s0-b">0.2 Escenario B — Despliegue nuevo del engine</h2>
+  <p>
+    Si la institución solo desea EVAL-IA (sin el módulo de detección de abandono de SAIPA),
+    igualmente debe desplegar <code>saipa-engine</code> porque es el componente que contiene el
+    pipeline RAG, el embedder y la conexión a Ollama. El procedimiento es idéntico al descrito
+    en el <strong>Manual de Instalación SAIPA — Secciones 3 y 4</strong>, excepto que las
+    variables de <code>TELEGRAM_*</code> y <code>WHATSAPP_*</code> pueden quedar vacías.
+  </p>
+
+  <div class="callout warn">
+    <strong>IMPORTANTE</strong>
+    Sin un motor <code>saipa-engine</code> operativo, EVAL-IA queda en modo <em>read-only</em>: el plugin
+    se instala y muestra su UI, pero todas las operaciones de IA (generar rúbrica, generar preguntas,
+    corregir ensayos) fallarán con un error de conexión al engine.
+  </div>
+
+  <h2 class="section-h2" id="s0-decision">0.3 Árbol de decisión</h2>
+  <figure class="diagram">
+    <div class="mermaid">
+flowchart TD
+  A[¿Ya tiene saipa-engine corriendo?] -->|Sí| B[Escenario A]
+  A -->|No| C[¿Quiere también SAIPA?]
+  C -->|Sí| D[Instalar SAIPA primero<br/>Manual SAIPA §3-§9]
+  C -->|No| E[Escenario B:<br/>desplegar solo engine<br/>sin Telegram/WhatsApp]
+  B --> F[Instalar plugin local_evalia]
+  D --> F
+  E --> F
+  F --> G[Setup Wizard EVAL-IA]
+  G --> H[Indexar primer curso]
+  H --> I[Listo: generar rúbrica]
+    </div>
+    <figcaption>Figura 2. Árbol de decisión del escenario de despliegue.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ SECCIÓN 1: INTRODUCCIÓN -->
+<div class="page-break"></div>
+<section id="s1">
+  <h1 class="section-h1">1. Introducción</h1>
+
+  <h2 class="section-h2" id="s1-1">1.1 Propósito y alcance</h2>
+  <p>
+    EVAL-IA es un plugin <code>local</code> para Moodle 4.4+ que asiste al docente en todo el ciclo
+    de evaluación formativa y sumativa:
+  </p>
+  <ul>
+    <li><strong>Generación de rúbricas</strong> a partir del material del curso indexado.</li>
+    <li><strong>Generación de banco de preguntas</strong> (selección múltiple, verdadero/falso, numérica, respuesta corta, ensayo) derivadas de la rúbrica.</li>
+    <li><strong>Exámenes únicos por estudiante</strong>: cada alumno recibe una combinación distinta del banco.</li>
+    <li><strong>Corrección asistida por IA</strong>: para preguntas de ensayo el LLM produce una nota preliminar y justificación, que el docente valida o ajusta.</li>
+    <li><strong>Publicación en gradebook</strong>: las notas finales se envían al libro de calificaciones de Moodle como ítem manual.</li>
+    <li><strong>Legajos y observaciones</strong>: registro por alumno de observaciones pedagógicas exportables a CSV.</li>
+  </ul>
+
+  <h2 class="section-h2" id="s1-2">1.2 Audiencia objetivo</h2>
+  <p>Este manual asume:</p>
+  <ul>
+    <li>Administradores de Moodle con acceso root al servidor o al contenedor Docker.</li>
+    <li>Conocimiento básico de Docker Compose, HTTP/TLS y <code>bash</code>.</li>
+    <li>Familiaridad con el ciclo <em>install plugin → upgrade.php → purge caches</em> de Moodle.</li>
+  </ul>
+
+  <h2 class="section-h2" id="s1-3">1.3 Relación con SAIPA</h2>
+  <p>
+    EVAL-IA y SAIPA son plugins independientes que comparten el mismo motor
+    <code>saipa-engine</code>. Pueden coexistir en la misma instalación de Moodle sin conflictos:
+  </p>
+  <ul>
+    <li><strong>SAIPA</strong> se enfoca en la <em>prevención del abandono</em>: detección de riesgo (XGBoost), chat RAG, alertas proactivas por Telegram/WhatsApp.</li>
+    <li><strong>EVAL-IA</strong> se enfoca en la <em>evaluación asistida</em>: rúbricas, preguntas, corrección de ensayos, publicación en gradebook.</li>
+  </ul>
+  <p>
+    La colección ChromaDB <code>course_{id}</code> indexada por uno de los plugins es reutilizada
+    automáticamente por el otro.
+  </p>
+
+  <h2 class="section-h2" id="s1-4">1.4 Componentes del sistema</h2>
+  <figure class="diagram">
+    <div class="mermaid">
+flowchart LR
+  subgraph MOODLE[Moodle 4.4+]
+    LE[local_evalia]
+    LS[local_saipa<br/><em>opcional</em>]
+    GB[(Gradebook)]
+    DB[(mdl_evalia_*)]
+    LE --- GB
+    LE --- DB
+  end
+  subgraph ENGINE[saipa-engine FastAPI]
+    RAG[RAG pipeline]
+    LLM[Ollama LLM]
+    CHR[(ChromaDB)]
+    RAG --- LLM
+    RAG --- CHR
+  end
+  LE -->|HTTPS / token| RAG
+  LS -->|HTTPS / token| RAG
+    </div>
+    <figcaption>Figura 1. Arquitectura de EVAL-IA sobre Moodle y saipa-engine.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s1-5">1.5 Convenciones tipográficas</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th style="width:22%;">Elemento</th><th>Significado</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>monoespaciado</code></td><td>Comandos, rutas, nombres de archivo y variables.</td></tr>
+        <tr><td><span class="badge req">REQ</span></td><td>Requisito obligatorio.</td></tr>
+        <tr><td><span class="badge opt">OPT</span></td><td>Opcional — no bloquea la instalación.</td></tr>
+        <tr><td><span class="badge saipa">SAIPA</span></td><td>Paso compartido con el Manual SAIPA — se referencia en lugar de duplicar.</td></tr>
+        <tr><td><span class="badge port">PORT</span></td><td>Número de puerto TCP.</td></tr>
+        <tr><td>💡 Callout NOTE</td><td>Información complementaria útil pero no crítica.</td></tr>
+        <tr><td>⚠ Callout WARN</td><td>Advertencia que debe leerse antes de proceder.</td></tr>
+        <tr><td>✓ Callout OK</td><td>Verificación de éxito esperada.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 2: PRERREQUISITOS -->
+<div class="page-break"></div>
+<section id="s2">
+  <h1 class="section-h1">2. Prerrequisitos</h1>
+
+  <h2 class="section-h2" id="s2-1">2.1 Infraestructura de hardware</h2>
+  <p>
+    EVAL-IA por sí mismo no impone requisitos de hardware más allá de los de Moodle.
+    Los requisitos fuertes son los del <code>saipa-engine</code>:
+  </p>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Componente</th><th>Mínimo</th><th>Recomendado</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>CPU</td><td>4 vCPU</td><td>8 vCPU</td></tr>
+        <tr><td>RAM</td><td>16 GB</td><td>32 GB (LLM local 14B)</td></tr>
+        <tr><td>Disco (engine + índices)</td><td>30 GB SSD</td><td>80 GB SSD</td></tr>
+        <tr><td>GPU (Ollama)</td><td>— <span class="badge opt">OPT</span></td><td>NVIDIA 12 GB+ VRAM</td></tr>
+        <tr><td>Red hacia Moodle</td><td>100 Mbps</td><td>1 Gbps intra-red</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 1. Requisitos de hardware mínimos y recomendados.</em></p>
+
+  <div class="callout note">
+    <strong>NOTA</strong>
+    Sin GPU, EVAL-IA funciona pero cada generación de rúbrica puede tardar 20–60 segundos, y
+    la corrección de ensayos es proporcional a la longitud del texto del alumno. Con GPU, los
+    tiempos bajan a 3–8 segundos por rúbrica.
+  </div>
+
+  <h2 class="section-h2" id="s2-2">2.2 Software base</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Software</th><th>Versión mínima</th><th>Notas</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Moodle</td><td>4.4 (build 2024042200)</td><td>También certificado en 4.5.</td></tr>
+        <tr><td>PHP</td><td>8.1</td><td>Con extensiones <code>curl</code>, <code>json</code>, <code>mbstring</code>.</td></tr>
+        <tr><td>MariaDB / MySQL</td><td>10.6 / 8.0</td><td>PostgreSQL 13+ también soportado.</td></tr>
+        <tr><td>Docker Engine</td><td>24.x</td><td>Para el <code>saipa-engine</code>.</td></tr>
+        <tr><td>Docker Compose</td><td>v2.20+</td><td>Plugin oficial de Docker.</td></tr>
+        <tr><td>Ollama</td><td>0.3+</td><td>En el host o vía contenedor.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 2. Software base requerido.</em></p>
+
+  <h2 class="section-h2" id="s2-3">2.3 Requisito del motor RAG (saipa-engine)</h2>
+  <p>
+    EVAL-IA consume los siguientes endpoints del engine. Antes de instalar el plugin, verifique
+    que estén accesibles desde el servidor Moodle:
+  </p>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Endpoint</th><th>Método</th><th>Propósito</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>/health</code></td><td>GET</td><td>Health check del engine y dependencias.</td></tr>
+        <tr><td><code>/eval/rubric/generate</code></td><td>POST</td><td>Generar rúbrica a partir del material indexado.</td></tr>
+        <tr><td><code>/eval/questions/generate</code></td><td>POST</td><td>Generar banco de preguntas desde una rúbrica.</td></tr>
+        <tr><td><code>/eval/grade/essay</code></td><td>POST</td><td>Corrección asistida de ensayos con justificación.</td></tr>
+        <tr><td><code>/eval/sources/{course_id}</code></td><td>GET</td><td>Listar fuentes indexadas del curso.</td></tr>
+        <tr><td><code>/index/course</code></td><td>POST</td><td>Indexar material de un curso en ChromaDB.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 3. Endpoints del engine utilizados por EVAL-IA.</em></p>
+
+  <h2 class="section-h2" id="s2-4">2.4 Puertos de red</h2>
+  <p>
+    EVAL-IA no abre puertos propios. Reutiliza la comunicación HTTP(S) que el plugin Moodle ya
+    establece con el engine (típicamente <code>8052</code> en la red Docker interna, o el dominio
+    público TLS expuesto por Nginx — ver <strong>Manual SAIPA §10</strong>).
+  </p>
+</section>
+
+<!-- ============================================================ SECCIÓN 3: PREPARACIÓN -->
+<div class="page-break"></div>
+<section id="s3">
+  <h1 class="section-h1">3. Preparación del entorno</h1>
+
+  <h2 class="section-h2" id="s3-1">3.1 Verificación del motor existente (Escenario A)</h2>
+  <p>Si el engine ya está corriendo para SAIPA, ejecute desde el servidor Moodle:</p>
+<pre><code>curl -s http://localhost:8052/health | python3 -m json.tool</code></pre>
+  <p>La respuesta esperada es:</p>
+<pre><code>{
+  "status": "ok",
+  "components": {
+    "ollama":   "ok",
+    "chromadb": "ok",
+    "moodle":   "ok"
+  },
+  "version": "0.2.0"
+}</code></pre>
+  <div class="callout ok">
+    <strong>OK</strong>
+    Si recibe <code>status: ok</code> en los tres componentes, puede saltar directamente a
+    <a href="#s4">§4 — Instalación del plugin</a>.
+  </div>
+
+  <h2 class="section-h2" id="s3-2">3.2 Despliegue del motor desde cero (Escenario B)</h2>
+  <p>
+    Siga el <strong>Manual de Instalación SAIPA — §3 Preparación del entorno</strong> y
+    <strong>§4 Despliegue del motor</strong>. Para una instalación exclusivamente EVAL-IA puede:
+  </p>
+  <ul>
+    <li>Dejar vacías las variables <code>TELEGRAM_BOT_TOKEN</code>, <code>TELEGRAM_WEBHOOK_URL</code>.</li>
+    <li>Omitir el contenedor <code>evolution-api</code> del <code>docker-compose.yml</code>.</li>
+    <li>Mantener obligatorios: <code>MOODLE_URL</code>, <code>MOODLE_TOKEN</code>, <code>OLLAMA_HOST</code>, <code>CHROMA_PATH</code>.</li>
+  </ul>
+
+  <h2 class="section-h2" id="s3-3">3.3 Obtención del token de Moodle</h2>
+  <p>
+    EVAL-IA reutiliza el mismo token de servicio web que el engine usa para SAIPA. Si no existe,
+    créelo:
+  </p>
+  <ol class="steps">
+    <li>Site administration → Server → Web services → <em>Manage tokens</em>.</li>
+    <li>Botón <em>Add</em>. Seleccione el usuario de servicio (ej. <code>saipa_ws_user</code>) y el servicio <em>External services: SAIPA API</em> (o créelo si no existe).</li>
+    <li>Copie el token generado y péguelo en <code>docker/saipa-engine.env</code> como <code>MOODLE_TOKEN=...</code>.</li>
+    <li>Reinicie el engine: <code>docker compose up -d --force-recreate saipa-engine</code>.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ SECCIÓN 4: INSTALACIÓN PLUGIN -->
+<div class="page-break"></div>
+<section id="s4">
+  <h1 class="section-h1">4. Instalación del plugin local_evalia</h1>
+
+  <h2 class="section-h2" id="s4-1">4.1 Descarga del paquete</h2>
+  <p>
+    Obtenga el ZIP distribuido por Schaller &amp; Ponce (<code>local_evalia-0.4.8.zip</code>) o clone
+    el repositorio privado si su licencia lo permite. El ZIP contiene únicamente la carpeta
+    <code>local_evalia/</code>, tal como Moodle lo espera.
+  </p>
+
+  <h2 class="section-h2" id="s4-2">4.2 Instalación vía interfaz web</h2>
+  <ol class="steps">
+    <li>Inicie sesión como <strong>Site administrator</strong>.</li>
+    <li>Vaya a <em>Site administration → Plugins → Install plugins</em>.</li>
+    <li>Arrastre el ZIP o haga click en <em>Choose a file</em> y seleccione <code>local_evalia-0.4.8.zip</code>.</li>
+    <li>Botón <em>Install plugin from the ZIP file</em>.</li>
+    <li>Moodle valida el paquete; confirme con <em>Continue</em>.</li>
+    <li>En la pantalla de <em>Plugins check</em> verifique que aparece <code>local_evalia</code> como <span class="badge opt">NEW</span>.</li>
+    <li>Botón <em>Upgrade Moodle database now</em>. Espere el mensaje <em>Success</em>.</li>
+  </ol>
+
+  <h2 class="section-h2" id="s4-3">4.3 Instalación vía CLI (recomendada para producción)</h2>
+<pre><code># 1. Copiar el plugin a la ruta correcta
+cd /var/www/html/local
+unzip /tmp/local_evalia-0.4.8.zip
+chown -R www-data:www-data evalia
+
+# 2. Ejecutar upgrade sin intervención
+cd /var/www/html
+sudo -u www-data php admin/cli/upgrade.php --non-interactive
+
+# 3. Purgar cachés
+sudo -u www-data php admin/cli/purge_caches.php</code></pre>
+  <div class="callout note">
+    <strong>DOCKER</strong>
+    En entornos Docker (imagen <code>bitnami/moodle</code> u oficial), reemplace las rutas por
+    <code>docker exec saipa-moodle php /var/www/html/admin/cli/upgrade.php --non-interactive</code>.
+  </div>
+
+  <h2 class="section-h2" id="s4-4">4.4 Verificación del estado del plugin</h2>
+  <p>Desde <em>Site administration → Plugins → Plugins overview</em>, filtre por <code>local_evalia</code>. Debe mostrarse:</p>
+  <ul>
+    <li>Versión: <code>2026041001</code></li>
+    <li>Release: <code>0.4.8</code></li>
+    <li>Maturity: <code>ALPHA</code></li>
+    <li>Enabled: <strong>Yes</strong></li>
+  </ul>
+  <p>
+    Las siguientes tablas deben existir en la base de datos (prefijo <code>mdl_</code> variable):
+  </p>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Tabla</th><th>Propósito</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>evalia_rubrics</code></td><td>Rúbricas generadas o editadas por el docente.</td></tr>
+        <tr><td><code>evalia_rubric_items</code></td><td>Criterios individuales de cada rúbrica.</td></tr>
+        <tr><td><code>evalia_questions</code></td><td>Banco de preguntas por curso.</td></tr>
+        <tr><td><code>evalia_exams</code></td><td>Exámenes configurados por el docente.</td></tr>
+        <tr><td><code>evalia_exam_attempts</code></td><td>Intentos únicos por estudiante.</td></tr>
+        <tr><td><code>evalia_exam_answers</code></td><td>Respuestas individuales con estado de corrección.</td></tr>
+        <tr><td><code>evalia_observations</code></td><td>Observaciones pedagógicas del legajo.</td></tr>
+        <tr><td><code>evalia_settings</code></td><td>Configuración global y por curso.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 7. Tablas de base de datos creadas.</em></p>
+</section>
+
+<!-- ============================================================ SECCIÓN 5: WIZARD -->
+<div class="page-break"></div>
+<section id="s5">
+  <h1 class="section-h1">5. Setup wizard de EVAL-IA</h1>
+
+  <p>
+    Tras la instalación, EVAL-IA provee un asistente de configuración en siete pasos que valida
+    la conexión al engine y deja listas las credenciales. Está disponible en:
+  </p>
+<pre><code>https://&lt;su-moodle&gt;/local/evalia/setup.php</code></pre>
+
+  <h2 class="section-h2" id="s5-1">5.1 Acceso al asistente</h2>
+  <p>
+    Ingrese como administrador. El wizard aparece automáticamente la primera vez que se visita
+    cualquier página de EVAL-IA si la configuración global está vacía. También es accesible
+    desde <em>Site administration → Plugins → Local plugins → EVAL-IA → Setup Wizard</em>.
+  </p>
+
+  <h2 class="section-h2" id="s5-2">5.2 Pasos 1 a 7</h2>
+  <ol class="steps">
+    <li><strong>Bienvenida</strong> — Resumen de funcionalidades. Botón <em>Comenzar</em>.</li>
+    <li><strong>Requisitos</strong> — Chequeo de Moodle 4.4+, PHP 8.1+, extensiones curl/json. Fallas deben resolverse antes de continuar.</li>
+    <li><strong>Modo de IA</strong> — Tres opciones: <em>saipa-engine local</em>, <em>engine remoto (TLS)</em>, <em>compartir config con local_saipa</em>. Esta última sólo aparece si SAIPA está instalado.</li>
+    <li><strong>Conexión al engine</strong> — Formulario con URL base, token de servicio, y modelo LLM preferido. Botón <em>Probar conexión</em> dispara un <code>GET /health</code> en tiempo real.</li>
+    <li><strong>Canal de notificaciones</strong> <span class="badge opt">OPT</span> — Configuración del bot Telegram para enviar a los alumnos el aviso de corrección publicada. Puede saltarse.</li>
+    <li><strong>Prueba final</strong> — Ejecuta un <em>smoke test</em>: genera una rúbrica de 3 criterios sobre un texto embebido de prueba y verifica que el LLM responde correctamente.</li>
+    <li><strong>Finalización</strong> — Confirmación visual. Botón <em>Ir al panel docente</em>.</li>
+  </ol>
+
+  <div class="callout ok">
+    <strong>OK</strong>
+    Al completar los 7 pasos, la configuración queda persistida en <code>mdl_config_plugins</code>
+    bajo el componente <code>local_evalia</code> y en <code>evalia_settings</code>.
+  </div>
+
+  <h2 class="section-h2" id="s5-3">5.3 Resolución de errores del wizard</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Error</th><th>Causa probable</th><th>Solución</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Connection refused</code> en Paso 4</td><td>Engine no está corriendo o URL incorrecta.</td><td><code>docker ps | grep saipa-engine</code> y verificar <code>curl /health</code>.</td></tr>
+        <tr><td><code>401 Unauthorized</code></td><td>Token de engine vencido o revocado.</td><td>Regenerar token en <em>Manage tokens</em> y re-ingresarlo.</td></tr>
+        <tr><td><code>Ollama model not found</code></td><td>El modelo configurado no está descargado.</td><td><code>ollama pull qwen2.5:14b</code> en el host.</td></tr>
+        <tr><td>Paso 6 (smoke test) timeout</td><td>LLM muy lento sin GPU.</td><td>Incrementar <code>ENGINE_TIMEOUT</code> en el wizard a 120s.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 6: CONFIG MOODLE -->
+<div class="page-break"></div>
+<section id="s6">
+  <h1 class="section-h1">6. Configuración en Moodle</h1>
+
+  <h2 class="section-h2" id="s6-1">6.1 Servicio web local_evalia</h2>
+  <p>
+    El plugin registra automáticamente un servicio externo llamado <em>EVAL-IA API</em> en
+    <em>Site administration → Server → Web services → External services</em>. El engine lo usa
+    para consultar la estructura del curso, descargar recursos y publicar calificaciones.
+  </p>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Web service</th><th>Función</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>local_evalia_get_course_sources</code></td><td>Lista fuentes indexadas (material del curso).</td></tr>
+        <tr><td><code>local_evalia_generate_rubric</code></td><td>Dispara generación de rúbrica en el engine.</td></tr>
+        <tr><td><code>local_evalia_generate_questions</code></td><td>Genera banco de preguntas desde rúbrica.</td></tr>
+        <tr><td><code>local_evalia_create_exam</code></td><td>Crea un examen único por estudiante.</td></tr>
+        <tr><td><code>local_evalia_grade_answer</code></td><td>Corrige una respuesta (IA o manual).</td></tr>
+        <tr><td><code>local_evalia_publish_to_gradebook</code></td><td>Publica el resultado final al libro de calificaciones.</td></tr>
+        <tr><td><code>local_evalia_save_observation</code></td><td>Guarda observación pedagógica en el legajo.</td></tr>
+        <tr><td><code>local_evalia_export_observations</code></td><td>Exporta legajos del curso a CSV.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 6. Web services registrados.</em></p>
+
+  <h2 class="section-h2" id="s6-2">6.2 Capacidades y roles</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Capacidad</th><th>Rol por defecto</th><th>Descripción</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>local/evalia:use</code></td><td>student</td><td>Rendir exámenes EVAL-IA.</td></tr>
+        <tr><td><code>local/evalia:manage</code></td><td>editingteacher</td><td>Generar rúbricas, crear exámenes, corregir.</td></tr>
+        <tr><td><code>local/evalia:publish</code></td><td>editingteacher</td><td>Publicar notas al gradebook.</td></tr>
+        <tr><td><code>local/evalia:viewall</code></td><td>manager</td><td>Ver legajos de todos los cursos (asesor académico).</td></tr>
+        <tr><td><code>local/evalia:admin</code></td><td>manager</td><td>Configuración global del plugin.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 5. Capacidades definidas por local_evalia.</em></p>
+
+  <h2 class="section-h2" id="s6-3">6.3 Creación automática de ítems de calificación</h2>
+  <p>
+    Cuando un docente publica el resultado de un examen, EVAL-IA crea (o reutiliza) un ítem
+    manual en el gradebook del curso con <code>idnumber = evalia_exam_{examid}</code>. No es
+    necesario crearlo manualmente. Para que funcione:
+  </p>
+  <ul>
+    <li>El curso debe tener el gradebook habilitado (estado por defecto).</li>
+    <li>El rol del docente debe tener <code>moodle/grade:manage</code> — incluido por defecto en <em>editingteacher</em>.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ SECCIÓN 7: INDEXACIÓN -->
+<div class="page-break"></div>
+<section id="s7">
+  <h1 class="section-h1">7. Indexación del primer curso</h1>
+
+  <p>
+    EVAL-IA requiere que el material del curso esté indexado en ChromaDB antes de poder generar
+    rúbricas o preguntas. Este paso lo realiza el engine, pero se dispara desde la interfaz de
+    EVAL-IA.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_1_indexar.png" alt="Panel de indexación">
+    <figcaption>Figura 4. Panel de indexación del curso en EVAL-IA.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s7-1">7.1 Requisitos del material</h2>
+  <ul>
+    <li>Los recursos soportados son: <em>Page</em>, <em>File</em> (PDF, DOCX, TXT, MD), <em>Book</em>, <em>Label</em> (texto plano).</li>
+    <li>Los PDFs escaneados <strong>sin OCR</strong> no se indexan: el engine los ignora silenciosamente.</li>
+    <li>El tamaño máximo por archivo está definido por <code>PHP upload_max_filesize</code>; 50 MB es suficiente en la mayoría de los casos.</li>
+  </ul>
+
+  <h2 class="section-h2" id="s7-2">7.2 Disparo manual de indexación</h2>
+  <ol class="steps">
+    <li>Ingrese al panel docente: <code>/local/evalia/teacher.php?courseid={id}</code>.</li>
+    <li>Tab <em>Indexación</em>. Verá la lista de recursos detectados y su estado (<em>pendiente</em>, <em>indexado</em>, <em>error</em>).</li>
+    <li>Botón <em>Indexar curso</em>. El engine procesa los recursos en background; la página muestra un spinner con progreso.</li>
+    <li>Cuando finaliza, cada recurso pasa a estado <em>indexado</em> con número de chunks generados.</li>
+  </ol>
+
+  <h2 class="section-h2" id="s7-3">7.3 Estado y reintento</h2>
+  <p>
+    Si un recurso falla (típicamente por un PDF corrupto o sin texto extraíble), se puede
+    reintentar individualmente con el botón 🔄 junto al recurso. El log completo está en el
+    engine:
+  </p>
+<pre><code>docker logs saipa-saipa-engine --tail 50 | grep -i "index"</code></pre>
+</section>
+
+<!-- ============================================================ SECCIÓN 8: FLUJO COMPLETO -->
+<div class="page-break"></div>
+<section id="s8">
+  <h1 class="section-h1">8. Flujo de trabajo EVAL-IA</h1>
+
+  <p>
+    Esta sección presenta el ciclo completo de evaluación tal como lo ve el docente. El manual
+    de usuario detallado queda fuera del alcance de este documento de instalación, pero esta
+    referencia rápida permite verificar que cada etapa funciona end-to-end.
+  </p>
+
+  <figure class="diagram">
+    <div class="mermaid">
+flowchart LR
+  A[1 Rúbrica IA] --> B[2 Banco preguntas]
+  B --> C[3 Exámenes únicos]
+  C --> D[4 Corrección asistida]
+  D --> E[5 Gradebook]
+  E --> F[6 Legajo/obs.]
+    </div>
+    <figcaption>Figura 3. Flujo completo de evaluación en EVAL-IA (6 pasos).</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s8-1">8.1 Paso 1 — Generación de rúbrica con IA</h2>
+  <p>
+    Tab <em>Rúbricas</em> → botón <em>Generar con IA</em>. El docente especifica:
+  </p>
+  <ul>
+    <li><strong>Alcance</strong>: tema, unidad o curso completo.</li>
+    <li><strong>Fuentes</strong>: checklist de recursos indexados a considerar (si omite, usa todo).</li>
+    <li><strong>Cantidad de criterios</strong>: típicamente 4–8.</li>
+    <li><strong>Niveles de desempeño</strong>: por defecto 4 (insuficiente / básico / competente / avanzado).</li>
+  </ul>
+  <p>
+    El engine responde en 5–30 s con una rúbrica editable. El docente puede ajustar cada celda
+    antes de guardar.
+  </p>
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_2_rubrica.png" alt="Editor de rúbrica">
+    <figcaption>Figura 5. Editor de rúbrica generada por IA.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s8-2">8.2 Paso 2 — Banco de preguntas</h2>
+  <p>
+    Tab <em>Preguntas</em>. Partiendo de una rúbrica guardada, el docente solicita al motor que
+    genere N preguntas por cada criterio, en los tipos soportados:
+  </p>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Tipo</th><th>Corrección</th><th>Notas</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Selección múltiple (MC)</td><td>Automática</td><td>1 correcta, 3 distractores generados por LLM.</td></tr>
+        <tr><td>Verdadero / Falso</td><td>Automática</td><td>Afirmaciones sobre el material indexado.</td></tr>
+        <tr><td>Numérica</td><td>Automática</td><td>Con tolerancia configurable.</td></tr>
+        <tr><td>Respuesta corta</td><td>Automática (match) + revisión manual</td><td>Comparación case-insensitive con alternativas.</td></tr>
+        <tr><td>Ensayo</td><td>IA + validación docente</td><td>Ver §8.4.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 4. Tipos de preguntas soportados.</em></p>
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_3_preguntas.png" alt="Banco de preguntas">
+    <figcaption>Figura 6. Banco de preguntas con clasificación por tipo.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s8-3">8.3 Paso 3 — Exámenes únicos por estudiante</h2>
+  <p>
+    Tab <em>Exámenes</em>. Al crear un examen, EVAL-IA pide: cantidad de preguntas, tipos
+    permitidos, duración, ventana de disponibilidad. Al publicar el examen, el plugin genera
+    una combinación única del banco por cada estudiante matriculado con rol <em>student</em>,
+    evitando que dos alumnos reciban el mismo set.
+  </p>
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_4_examenes.png" alt="Panel de exámenes">
+    <figcaption>Figura 7. Panel de exámenes con intentos por estudiante.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s8-4">8.4 Paso 4 — Corrección asistida por IA</h2>
+  <p>
+    Para preguntas de ensayo, al cerrar el examen el docente accede al panel de corrección.
+    Para cada respuesta, EVAL-IA solicita al engine una nota preliminar (0–100) con justificación
+    y citación de la fuente indexada. El docente puede:
+  </p>
+  <ul>
+    <li>Aceptar la nota de la IA tal cual.</li>
+    <li>Ajustarla con un slider y dejar un comentario adicional.</li>
+    <li>Rechazar la sugerencia y corregir manualmente.</li>
+  </ul>
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_5_correccion.png" alt="Corrección asistida">
+    <figcaption>Figura 10. Corrección de ensayo por IA con justificación y citación.</figcaption>
+  </figure>
+
+  <div class="callout warn">
+    <strong>IMPORTANTE</strong>
+    La nota final nunca queda a cargo exclusivo del LLM. EVAL-IA exige la confirmación del
+    docente antes de publicar al gradebook. Esto es un requisito pedagógico y de auditoría.
+  </div>
+
+  <h2 class="section-h2" id="s8-5">8.5 Paso 5 — Publicación en gradebook</h2>
+  <p>
+    Cuando todas las respuestas del examen están corregidas, el botón <em>Publicar</em> envía
+    las notas al libro de calificaciones como un ítem manual. El ítem queda con
+    <code>idnumber = evalia_exam_{examid}</code> para trazabilidad.
+  </p>
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_7_gradebook.png" alt="Gradebook de Moodle">
+    <figcaption>Figura 9. Gradebook de Moodle con ítem EVAL-IA publicado.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s8-6">8.6 Paso 6 — Legajos y observaciones</h2>
+  <p>
+    Tab <em>Legajos</em>. Para cada alumno, el docente puede registrar observaciones pedagógicas
+    libres (no se envían al LLM), categorizadas por tipo (<em>académica</em>, <em>conductual</em>,
+    <em>seguimiento</em>). Las observaciones son exportables a CSV para su uso por el equipo
+    académico.
+  </p>
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_6_legajos.png" alt="Legajo del estudiante">
+    <figcaption>Figura 8. Legajo del estudiante con observaciones pedagógicas.</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s8-7">8.7 Asistente EVAL-IA (FAB del panel docente)</h2>
+  <p>
+    En la esquina inferior derecha del panel docente de EVAL-IA
+    (<code>/local/evalia/teacher.php?courseid={id}</code>) aparece un botón flotante arrastrable
+    con un ícono 🤖. Al hacer clic se despliega un chat con el <strong>Asistente EVAL-IA</strong>,
+    una IA entrenada para guiar al docente en cada etapa del flujo de trabajo.
+  </p>
+
+  <p>El asistente puede responder preguntas como:</p>
+  <ul>
+    <li>"¿Cómo genero una rúbrica que cubra solo las unidades 3 y 4?"</li>
+    <li>"¿Qué tipos de preguntas conviene usar para evaluación conceptual?"</li>
+    <li>"¿Por qué mi examen no aparece publicado en el gradebook?"</li>
+    <li>"¿Cómo re-indexo un PDF que subí tarde al curso?"</li>
+  </ul>
+
+  <div class="callout note">
+    <strong>POSICIÓN PERSISTENTE</strong>
+    El FAB es arrastrable y su posición se guarda en <code>localStorage</code> del navegador,
+    igual que el Asistente SAIPA del panel del asesor. Si el docente lo mueve a otra esquina,
+    queda ahí en visitas posteriores.
+  </div>
+
+  <div class="callout warn">
+    <strong>REQUIERE ENGINE ACTIVO</strong>
+    El asistente usa el endpoint <code>/chat/evalia</code> del <code>saipa-engine</code>. Si el
+    engine está caído o mal configurado, el FAB sigue apareciendo pero devuelve un error al
+    enviar mensajes. Verifique la conexión en §5.2 (Wizard Paso 4) o §9.1 (Health check).
+  </div>
+
+  <p>
+    Requisitos para que funcione:
+  </p>
+  <ul>
+    <li>El Setup Wizard (§5) debe estar completado con el engine respondiendo <code>status: ok</code>.</li>
+    <li>El docente debe tener la capacidad <code>local/evalia:manage</code>.</li>
+    <li>El curso debe estar indexado (§7) para que el asistente pueda dar recomendaciones con contexto del material real.</li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>DIFERENCIA CON SAIPA</strong>
+    El Asistente SAIPA vive en el panel del asesor académico (visión institucional, múltiples
+    cursos). El Asistente EVAL-IA vive en el panel docente (visión del docente, un curso a la
+    vez). Ambos son FABs arrastrables independientes y pueden coexistir sin conflictos cuando
+    los dos plugins están instalados.
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 9: VERIFICACIÓN -->
+<div class="page-break"></div>
+<section id="s9">
+  <h1 class="section-h1">9. Verificación post-instalación</h1>
+
+  <p>Ejecute los siguientes tres smoke tests en orden. Todos deben pasar antes de liberar el plugin a los docentes.</p>
+
+  <h2 class="section-h2" id="s9-1">9.1 Health check del engine desde Moodle</h2>
+<pre><code>curl -s https://engine.sudominio.edu/health \
+  -H "Authorization: Bearer &lt;MOODLE_TOKEN&gt;"</code></pre>
+  <p>Debe retornar <code>status: ok</code> en los tres componentes.</p>
+
+  <h2 class="section-h2" id="s9-2">9.2 Smoke test: generación de rúbrica</h2>
+  <ol class="steps">
+    <li>Cree un curso de prueba con al menos un recurso tipo <em>Page</em> con 200+ palabras de contenido.</li>
+    <li>Indéxelo (§7).</li>
+    <li>Tab Rúbricas → Generar con IA → Alcance: curso completo, 4 criterios.</li>
+    <li>Verifique que la rúbrica aparece en menos de 60 segundos con criterios coherentes con el material.</li>
+  </ol>
+
+  <h2 class="section-h2" id="s9-3">9.3 Smoke test: corrección de ensayo</h2>
+  <ol class="steps">
+    <li>Con la rúbrica del paso anterior, genere un examen de 1 pregunta de ensayo.</li>
+    <li>Desde otro navegador (o sesión incógnito) rinda el examen como estudiante de prueba.</li>
+    <li>Cierre el examen desde el panel docente.</li>
+    <li>Abra la corrección: debe mostrar nota sugerida por la IA con justificación citando el recurso indexado.</li>
+    <li>Acepte la nota y publique al gradebook.</li>
+    <li>Verifique en <em>Calificaciones</em> del curso que el ítem <code>evalia_exam_{id}</code> aparece con el valor esperado.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ SECCIÓN 10: ACTUALIZACIONES -->
+<div class="page-break"></div>
+<section id="s10">
+  <h1 class="section-h1">10. Actualizaciones de versión</h1>
+
+  <h2 class="section-h2" id="s10-1">10.1 Actualización del plugin</h2>
+  <ol class="steps">
+    <li>Ponga Moodle en modo mantenimiento: <code>php admin/cli/maintenance.php --enable</code>.</li>
+    <li>Respalde la base de datos (<code>mysqldump</code> / <code>pg_dump</code>).</li>
+    <li>Reemplace la carpeta <code>local/evalia/</code> por la nueva versión.</li>
+    <li>Ejecute <code>php admin/cli/upgrade.php --non-interactive</code>.</li>
+    <li>Purge caches: <code>php admin/cli/purge_caches.php</code>.</li>
+    <li>Salga del modo mantenimiento: <code>--disable</code>.</li>
+  </ol>
+
+  <h2 class="section-h2" id="s10-2">10.2 Actualización del engine</h2>
+<pre><code>cd /home/saipa/SAIPA/docker
+git -C ../saipa-engine pull
+docker compose build saipa-engine
+docker compose up -d --force-recreate saipa-engine
+docker logs saipa-saipa-engine --tail 30</code></pre>
+
+  <h2 class="section-h2" id="s10-3">10.3 Compatibilidad entre versiones</h2>
+  <div class="callout note">
+    <strong>COMPAT</strong>
+    EVAL-IA 0.4.x es compatible con saipa-engine 0.2.x. Consulte
+    <code>CHANGES.md</code> del plugin antes de cualquier upgrade mayor para ver notas de
+    breaking changes.
+  </div>
+</section>
+
+<!-- ============================================================ SECCIÓN 11: RESOLUCIÓN -->
+<div class="page-break"></div>
+<section id="s11">
+  <h1 class="section-h1">11. Resolución de problemas</h1>
+
+  <h2 class="section-h2" id="s11-1">11.1 Diagnóstico con logs</h2>
+<pre><code># Engine
+docker logs saipa-saipa-engine --tail 100 -f
+
+# Moodle (errores PHP)
+tail -f /var/www/html/moodledata/error.log
+
+# Acceso web
+tail -f /var/log/apache2/access.log | grep evalia</code></pre>
+
+  <h2 class="section-h2" id="s11-2">11.2 Problemas frecuentes</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Síntoma</th><th>Causa</th><th>Solución</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Wizard Paso 4 falla con <em>Connection refused</em></td><td>Engine caído.</td><td><code>docker compose up -d saipa-engine</code>.</td></tr>
+        <tr><td>Generación de rúbrica tarda &gt;120s</td><td>Ollama sin GPU, modelo grande.</td><td>Usar <code>qwen2.5:7b</code> o agregar GPU al host.</td></tr>
+        <tr><td>Rúbrica con contenido irrelevante</td><td>Curso no indexado o fuentes vacías.</td><td>Reindexar desde Tab Indexación (§7).</td></tr>
+        <tr><td>Gradebook no muestra el ítem</td><td>Docente sin capacidad <code>moodle/grade:manage</code>.</td><td>Asignar rol <em>editingteacher</em> completo.</td></tr>
+        <tr><td>CSV de legajos vacío</td><td>No hay observaciones registradas.</td><td>Verificar que se guardaron observaciones por alumno.</td></tr>
+        <tr><td>Corrección de ensayo sin justificación</td><td>Modelo LLM pequeño o timeout.</td><td>Aumentar <code>ENGINE_TIMEOUT</code> o usar modelo 14B.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><em>Tabla 8. Diagnóstico de problemas frecuentes.</em></p>
+
+  <h2 class="section-h2" id="s11-3">11.3 Comandos de mantenimiento</h2>
+<pre><code># Reindexar un curso completo
+curl -X POST https://engine.sudominio.edu/index/course \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"course_id": 42, "force": true}'
+
+# Limpiar caché de Moodle (obligatorio tras upgrade)
+php admin/cli/purge_caches.php
+
+# Verificar estado de las tablas EVAL-IA
+php admin/cli/mysql_compressed_rows.php | grep evalia</code></pre>
+</section>
+
+<!-- ============================================================ SECCIÓN 12: SEGURIDAD -->
+<div class="page-break"></div>
+<section id="s12">
+  <h1 class="section-h1">12. Seguridad y privacidad</h1>
+
+  <h2 class="section-h2" id="s12-1">12.1 Datos procesados por EVAL-IA</h2>
+  <p>
+    EVAL-IA envía al engine (y por lo tanto al LLM) únicamente los siguientes datos:
+  </p>
+  <ul>
+    <li>Fragmentos del material indexado del curso (públicos dentro del aula).</li>
+    <li>Respuestas de los estudiantes a preguntas de ensayo (para su corrección).</li>
+    <li>Nombres de curso y tema, sin datos personales identificables.</li>
+  </ul>
+  <p>
+    <strong>No</strong> se envían al LLM: nombres de alumnos, emails, direcciones IP, notas
+    históricas, ni observaciones pedagógicas registradas en los legajos.
+  </p>
+
+  <h2 class="section-h2" id="s12-2">12.2 Privacy API de Moodle</h2>
+  <p>
+    EVAL-IA implementa el <em>Privacy provider</em> estándar de Moodle. Los datos que el plugin
+    exporta ante una solicitud de derecho al olvido / portabilidad son:
+  </p>
+  <ul>
+    <li><code>evalia_exam_attempts</code> — intentos del usuario.</li>
+    <li><code>evalia_exam_answers</code> — respuestas dadas.</li>
+    <li><code>evalia_observations</code> — observaciones donde el usuario figura como sujeto o autor.</li>
+  </ul>
+  <p>
+    Las rúbricas y el banco de preguntas no son datos personales (pertenecen al curso) y no se
+    incluyen en los exports de privacidad.
+  </p>
+
+  <h2 class="section-h2" id="s12-3">12.3 Licencia GPL v3</h2>
+  <p>
+    <code>local_evalia</code> se distribuye bajo GNU GPL v3 o superior, consistente con Moodle core.
+    El motor <code>saipa-engine</code> mantiene su licenciamiento comercial separado y no es
+    redistribuible bajo GPL.
+  </p>
+</section>
+
+<!-- ============================================================ SECCIÓN 13: REFERENCIAS -->
+<div class="page-break"></div>
+<section id="s13">
+  <h1 class="section-h1">13. Referencias</h1>
+  <ol>
+    <li>Schaller &amp; Ponce. <em>SAIPA — Manual de Instalación v0.5.0</em>. 2026. Documento complementario de este manual (§3, §4, §10).</li>
+    <li>Moodle HQ. <em>Moodle Developer Docs — Local plugins</em>. <a href="https://moodledev.io/docs/apis/plugintypes/local">moodledev.io/docs/apis/plugintypes/local</a>.</li>
+    <li>Moodle HQ. <em>Privacy API</em>. <a href="https://moodledev.io/docs/apis/subsystems/privacy">moodledev.io/docs/apis/subsystems/privacy</a>.</li>
+    <li>Ollama Project. <em>Ollama — Run large language models locally</em>. <a href="https://ollama.com">ollama.com</a>.</li>
+    <li>Chroma. <em>ChromaDB Documentation</em>. <a href="https://docs.trychroma.com">docs.trychroma.com</a>.</li>
+    <li>LangChain. <em>LangChain Python Documentation</em>. <a href="https://python.langchain.com">python.langchain.com</a>.</li>
+    <li>FastAPI. <em>FastAPI — Modern, fast web framework for building APIs</em>. <a href="https://fastapi.tiangolo.com">fastapi.tiangolo.com</a>.</li>
+    <li>Free Software Foundation. <em>GNU General Public License v3.0</em>. <a href="https://www.gnu.org/licenses/gpl-3.0.html">gnu.org/licenses/gpl-3.0.html</a>.</li>
+  </ol>
+
+  <hr class="section-rule">
+
+  <p style="text-align: center; font-size: 9pt; color: var(--gray3); margin-top: 40px;">
+    Fin del Manual de Instalación de EVAL-IA v0.4.8 — Abril 2026<br>
+    Schaller &amp; Ponce — <em>Soluciones Educativas con Inteligencia Artificial</em><br>
+    dev@schaller-ponce.com.ar
+  </p>
+</section>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+
+</body>
+</html>
