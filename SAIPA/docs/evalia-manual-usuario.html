@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAL-IA — Manual de Usuario v0.4.8</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  /* ---- Page setup ---- */
+  @page { size: A4; margin: 25mm 10mm 25mm 20mm; }
+  @media print {
+    .page-break  { page-break-before: always; }
+    nav, .no-print { display: none; }
+    body         { padding: 0; max-width: none; }
+    .table-wrapper { overflow-x: visible; }
+    pre            { overflow-x: visible; white-space: pre-wrap; word-break: break-all; }
+    table.std      { font-size: 8.5pt; }
+    table.std th   { font-size: 8pt; }
+    table.std, figure, .mermaid, .callout, ol.steps li, pre {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1.section-h1, h2.section-h2, h3.section-h3, h4.section-h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+  }
+
+  :root {
+    --blue:   #1a3a6b;
+    --blue2:  #2557a7;
+    --teal:   #0d7377;
+    --purple: #5b2c83;
+    --gray1:  #f4f6fb;
+    --gray2:  #e8ecf4;
+    --gray3:  #b0bacf;
+    --black:  #1a1a2e;
+    --text:   #2c2c3e;
+    --warn:   #8b3a00;
+    --warn-bg:#fff4e6;
+    --note:   #003366;
+    --note-bg:#eaf2ff;
+    --ok:     #1a5c28;
+    --ok-bg:  #edfff2;
+    --grade-low:   #dc2626;
+    --grade-med:   #ca8a04;
+    --grade-high:  #16a34a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: var(--text);
+    background: #fff;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 0 10mm;
+  }
+
+  /* ---- Cover ---- */
+  #cover {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    min-height: 96vh; text-align: center;
+    border-bottom: 4px solid var(--purple);
+    padding: 20mm 0 15mm;
+  }
+  #cover .logo-box {
+    width: 90px; height: 90px;
+    background: var(--purple); border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(91,44,131,.25);
+  }
+  #cover .logo-box span { color: #fff; font-size: 24pt; font-weight: 900; letter-spacing: -2px; }
+  #cover h1 { font-size: 28pt; color: var(--purple); line-height: 1.15; margin-bottom: 6px; }
+  #cover h2 { font-size: 15pt; color: var(--teal); font-weight: 400; margin-bottom: 30px; }
+  #cover .tag {
+    display: inline-block;
+    background: var(--gray2); color: var(--purple);
+    padding: 4px 14px; border-radius: 20px;
+    font-size: 9pt; font-weight: 600; letter-spacing: .5px;
+    margin-bottom: 40px;
+  }
+  #cover table.meta { border-collapse: collapse; width: 320px; font-size: 9.5pt; }
+  #cover table.meta td { padding: 4px 10px; border-bottom: 1px solid var(--gray2); }
+  #cover table.meta td:first-child { color: var(--gray3); font-weight: 600; text-align: right; }
+  #cover .footer-note { margin-top: auto; padding-top: 30px; font-size: 8.5pt; color: var(--gray3); }
+
+  /* ---- Headings ---- */
+  h1, h2, h3, h4, h5 { color: var(--blue); font-weight: 700; }
+  h1.section-h1 { font-size: 17pt; border-bottom: 3px solid var(--purple); padding-bottom: 6px; margin: 30px 0 14px; }
+  h2.section-h2 { font-size: 13pt; border-left: 4px solid var(--teal); padding-left: 10px; margin: 22px 0 10px; }
+  h3.section-h3 { font-size: 11pt; margin: 16px 0 8px; color: var(--blue2); }
+  h4.section-h4 { font-size: 10.5pt; margin: 12px 0 6px; color: var(--teal); }
+
+  /* ---- ToC ---- */
+  #toc h1 { font-size: 17pt; border-bottom: 3px solid var(--purple); padding-bottom: 6px; margin-bottom: 16px; }
+  #toc ol { list-style: none; padding: 0; counter-reset: toc-top; }
+  #toc > ol > li { counter-increment: toc-top; margin-bottom: 2px; }
+  #toc > ol > li::before { content: counter(toc-top) ". "; font-weight: 700; color: var(--purple); margin-right: 4px; }
+  #toc ol ol { padding-left: 22px; counter-reset: toc-sub; }
+  #toc ol ol li { counter-increment: toc-sub; }
+  #toc ol ol li::before { content: counter(toc-top) "." counter(toc-sub) ". "; font-weight: 400; color: var(--blue2); margin-right: 4px; }
+  #toc a { color: var(--text); text-decoration: none; }
+  #toc a:hover { text-decoration: underline; color: var(--blue2); }
+  #toc li { font-size: 10pt; padding: 2px 0; }
+  #toc > ol > li { font-size: 10.5pt; font-weight: 600; }
+
+  /* ---- Figures lists ---- */
+  .list-of { margin-bottom: 10px; }
+  .list-of h1 { font-size: 14pt; border-bottom: 2px solid var(--gray2); padding-bottom: 4px; margin-bottom: 10px; }
+  .list-of ol { list-style: none; padding: 0; }
+  .list-of li { font-size: 9.5pt; padding: 2px 0; display: flex; gap: 6px; }
+  .list-of li .label { color: var(--blue2); font-weight: 600; white-space: nowrap; }
+  .list-of li .dots { flex: 1; border-bottom: 1px dotted var(--gray3); margin-bottom: 3px; }
+
+  /* ---- Callouts ---- */
+  .callout { border-left: 4px solid; border-radius: 4px; padding: 10px 14px; margin: 14px 0; font-size: 9.5pt; }
+  .callout.note   { border-color: var(--blue2); background: var(--note-bg); color: var(--note); }
+  .callout.warn   { border-color: #d97706;      background: var(--warn-bg); color: var(--warn); }
+  .callout.ok     { border-color: #16a34a;      background: var(--ok-bg);   color: var(--ok); }
+  .callout.tip    { border-color: var(--teal);  background: #e6fffb;        color: #0f4c4e; }
+  .callout strong { font-weight: 700; text-transform: uppercase; font-size: 8.5pt; letter-spacing: .5px; margin-right: 4px; }
+
+  /* ---- Code ---- */
+  pre, code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    background: var(--gray1);
+    border: 1px solid var(--gray2);
+    border-radius: 4px;
+  }
+  code { padding: 1px 5px; }
+  pre { padding: 12px 14px; overflow-x: auto; margin: 10px 0; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+
+  /* ---- Figures / tables ---- */
+  figure { margin: 16px 0; }
+  figure figcaption { font-size: 9pt; color: var(--blue); font-style: italic; text-align: center; margin-top: 6px; }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--gray2); border-radius: 4px; }
+  figure.diagram figcaption { margin-top: 8px; }
+  .table-wrapper { overflow-x: auto; margin: 10px 0; }
+  table.std { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  table.std th { background: var(--purple); color: #fff; padding: 7px 10px; text-align: left; font-size: 9pt; }
+  table.std td { padding: 6px 10px; border-bottom: 1px solid var(--gray2); vertical-align: top; }
+  table.std tr:nth-child(even) td { background: var(--gray1); }
+
+  /* ---- Steps ---- */
+  ol.steps { list-style: none; counter-reset: step; padding: 0; }
+  ol.steps li { counter-increment: step; padding: 6px 0 6px 40px; position: relative; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 6px;
+    width: 26px; height: 26px;
+    background: var(--purple); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 9pt; font-weight: 700;
+  }
+
+  /* ---- Diagrams ---- */
+  .mermaid { background: var(--gray1); border: 1px solid var(--gray2); border-radius: 6px; padding: 16px; text-align: center; margin: 10px 0; }
+
+  /* ---- Grade bands ---- */
+  .grade-band {
+    display: inline-block;
+    font-size: 9pt; font-weight: 700;
+    padding: 2px 10px; border-radius: 12px;
+    color: #fff; letter-spacing: .3px;
+  }
+  .grade-band.low  { background: var(--grade-low); }
+  .grade-band.med  { background: var(--grade-med); }
+  .grade-band.high { background: var(--grade-high); }
+
+  /* ---- Role card ---- */
+  .role-card {
+    border: 1px solid var(--gray2);
+    border-left: 5px solid var(--purple);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    background: var(--gray1);
+  }
+  .role-card h4 { margin-top: 0; color: var(--purple); }
+  .role-card p { margin-bottom: 4px; }
+
+  hr.section-rule { border: none; border-top: 2px solid var(--gray2); margin: 30px 0; }
+  p { margin-bottom: 8px; }
+  ul, ol { padding-left: 22px; margin-bottom: 8px; }
+  li { margin-bottom: 3px; }
+  a { color: var(--blue2); }
+  kbd {
+    background: #fff; border: 1px solid var(--gray3);
+    border-bottom-width: 2px; border-radius: 3px;
+    padding: 1px 5px; font-size: 9pt;
+    font-family: monospace; color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ PORTADA -->
+<section id="cover">
+  <div class="logo-box"><span>EI</span></div>
+  <h1>EVAL-IA</h1>
+  <h2>Evaluación Asistida por Inteligencia Artificial para Moodle</h2>
+  <span class="tag">MANUAL DE USUARIO — v0.4.8</span>
+
+  <table class="meta">
+    <tr><td>Versión</td><td><strong>0.4.8</strong> (build 2026041001)</td></tr>
+    <tr><td>Fecha</td><td>Abril 2026</td></tr>
+    <tr><td>Autores</td><td>Schaller &amp; Ponce</td></tr>
+    <tr><td>Contacto</td><td>dev@schaller-ponce.com.ar</td></tr>
+    <tr><td>Audiencia</td><td>Docentes, estudiantes, asesores y administradores</td></tr>
+  </table>
+
+  <p class="footer-note">
+    Documento complementario del <em>Manual de Instalación EVAL-IA v0.4.8</em><br>
+    y del <em>Manual de Usuario SAIPA v0.5.0</em>.<br>
+    Schaller &amp; Ponce — Soluciones Educativas con Inteligencia Artificial
+  </p>
+</section>
+
+<!-- ============================================================ TOC -->
+<div class="page-break"></div>
+<section id="toc">
+  <h1>Tabla de Contenidos</h1>
+  <ol>
+    <li><a href="#s1">Introducción</a>
+      <ol>
+        <li><a href="#s1-1">¿Qué es EVAL-IA?</a></li>
+        <li><a href="#s1-2">Roles y qué hace cada uno con EVAL-IA</a></li>
+        <li><a href="#s1-3">Qué aprenderá en este manual</a></li>
+        <li><a href="#s1-4">Relación con SAIPA</a></li>
+        <li><a href="#s1-5">Convenciones del documento</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Primeros pasos</a>
+      <ol>
+        <li><a href="#s2-1">Acceso a EVAL-IA</a></li>
+        <li><a href="#s2-2">Verificación rápida antes de empezar</a></li>
+        <li><a href="#s2-3">El panel docente de un vistazo</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Guía del docente</a>
+      <ol>
+        <li><a href="#s3-1">Indexar el material del curso</a></li>
+        <li><a href="#s3-2">Generar una rúbrica con IA</a></li>
+        <li><a href="#s3-3">Crear el banco de preguntas</a></li>
+        <li><a href="#s3-4">Configurar y publicar un examen</a></li>
+        <li><a href="#s3-5">Corregir con asistencia de IA</a></li>
+        <li><a href="#s3-6">Publicar notas al gradebook</a></li>
+        <li><a href="#s3-7">Legajos del estudiante y observaciones</a></li>
+        <li><a href="#s3-8">Asistente EVAL-IA (chat flotante)</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Guía del estudiante</a>
+      <ol>
+        <li><a href="#s4-1">Rendir un examen EVAL-IA</a></li>
+        <li><a href="#s4-2">Navegación durante el examen</a></li>
+        <li><a href="#s4-3">Ver el resultado y la devolución</a></li>
+        <li><a href="#s4-4">Qué datos procesa EVAL-IA sobre mí</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Guía del asesor académico</a>
+      <ol>
+        <li><a href="#s5-1">Observar resultados a nivel institucional</a></li>
+        <li><a href="#s5-2">Exportar legajos y observaciones</a></li>
+        <li><a href="#s5-3">Uso cruzado con SAIPA</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Guía del administrador (uso diario)</a>
+      <ol>
+        <li><a href="#s6-1">Monitoreo del motor</a></li>
+        <li><a href="#s6-2">Re-indexación masiva</a></li>
+        <li><a href="#s6-3">Gestión de permisos</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Preguntas frecuentes</a></li>
+    <li><a href="#s8">Glosario</a></li>
+  </ol>
+</section>
+
+<!-- ============================================================ LISTA FIGURAS -->
+<div class="page-break"></div>
+<section class="list-of">
+  <h1>Lista de Figuras</h1>
+  <ol>
+    <li><span class="label">Figura 1.</span><span class="dots"></span><span>Panel de indexación del curso</span></li>
+    <li><span class="label">Figura 2.</span><span class="dots"></span><span>Editor de rúbrica generada por IA</span></li>
+    <li><span class="label">Figura 3.</span><span class="dots"></span><span>Banco de preguntas clasificado por tipo</span></li>
+    <li><span class="label">Figura 4.</span><span class="dots"></span><span>Panel de exámenes y asignación por estudiante</span></li>
+    <li><span class="label">Figura 5.</span><span class="dots"></span><span>Panel de corrección asistida por IA</span></li>
+    <li><span class="label">Figura 6.</span><span class="dots"></span><span>Legajo del estudiante con observaciones</span></li>
+    <li><span class="label">Figura 7.</span><span class="dots"></span><span>Gradebook de Moodle con ítem EVAL-IA publicado</span></li>
+    <li><span class="label">Figura 8.</span><span class="dots"></span><span>Corrección de ensayo por IA con justificación</span></li>
+    <li><span class="label">Figura 9.</span><span class="dots"></span><span>Flujo completo del docente (6 pasos)</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ 1: INTRO -->
+<div class="page-break"></div>
+<section id="s1">
+  <h1 class="section-h1">1. Introducción</h1>
+
+  <h2 class="section-h2" id="s1-1">1.1 ¿Qué es EVAL-IA?</h2>
+  <p>
+    <strong>EVAL-IA</strong> es un plugin de Moodle que acompaña al docente durante todo el
+    ciclo de evaluación, apoyándose en inteligencia artificial para las tareas más demandantes:
+  </p>
+  <ol>
+    <li><strong>Genera rúbricas</strong> a partir del material del curso, en segundos.</li>
+    <li><strong>Crea un banco de preguntas</strong> derivado de la rúbrica, en cinco tipos distintos (selección múltiple, verdadero/falso, numérica, respuesta corta y ensayo).</li>
+    <li><strong>Arma exámenes únicos</strong> por estudiante, evitando que dos alumnos reciban el mismo set de preguntas.</li>
+    <li><strong>Corrige ensayos con IA</strong> proponiendo una nota preliminar y su justificación, que el docente valida antes de publicar.</li>
+    <li><strong>Publica al gradebook</strong> de Moodle como un ítem manual trazable.</li>
+    <li><strong>Registra legajos pedagógicos</strong> por alumno, exportables a CSV.</li>
+  </ol>
+
+  <div class="callout tip">
+    <strong>EN UNA FRASE</strong>
+    EVAL-IA no toma decisiones por el docente: le presta una primera mano en todo el trabajo
+    repetitivo para que el docente se concentre en lo pedagógico.
+  </div>
+
+  <h2 class="section-h2" id="s1-2">1.2 Roles y qué hace cada uno con EVAL-IA</h2>
+
+  <div class="role-card">
+    <h4>👩‍🏫 Docente (editingteacher)</h4>
+    <p>Indexa el material, genera rúbricas con IA, arma bancos de preguntas, crea exámenes, corrige con asistencia de IA y publica al gradebook. Es el rol principal.</p>
+  </div>
+
+  <div class="role-card">
+    <h4>🎓 Estudiante</h4>
+    <p>Rinde los exámenes asignados por su docente dentro de Moodle. Recibe devoluciones con las notas y, opcionalmente, las justificaciones del corrector (docente o IA validada).</p>
+  </div>
+
+  <div class="role-card">
+    <h4>🧭 Asesor académico (manager)</h4>
+    <p>Observa los resultados de EVAL-IA a nivel institucional. Puede exportar legajos y observaciones para reuniones académicas. Comparte el dashboard con SAIPA si ambos plugins están instalados.</p>
+  </div>
+
+  <div class="role-card">
+    <h4>🛠️ Administrador (site admin)</h4>
+    <p>Monitorea el estado del motor de IA, gestiona re-indexaciones masivas y configura permisos a nivel sitio.</p>
+  </div>
+
+  <h2 class="section-h2" id="s1-3">1.3 Qué aprenderá en este manual</h2>
+  <p>
+    Este manual está organizado por rol, igual que su contraparte de SAIPA. No necesita leerlo
+    de punta a punta: salte directamente a la sección que le corresponde. Los docentes (§3)
+    encontrarán el ciclo completo de trabajo; los estudiantes (§4) cómo rendir exámenes;
+    asesores (§5) cómo observar resultados institucionales; administradores (§6) las tareas
+    operativas diarias.
+  </p>
+
+  <h2 class="section-h2" id="s1-4">1.4 Relación con SAIPA</h2>
+  <p>
+    EVAL-IA y SAIPA son plugins complementarios pero independientes. Pueden coexistir en la
+    misma instalación de Moodle sin conflictos, y comparten el mismo motor de IA
+    (<code>saipa-engine</code>).
+  </p>
+  <ul>
+    <li><strong>SAIPA</strong> se enfoca en <em>prevención del abandono</em>: detección de riesgo, chat RAG, alertas proactivas.</li>
+    <li><strong>EVAL-IA</strong> se enfoca en <em>evaluación asistida</em>: rúbricas, preguntas, corrección de ensayos, gradebook.</li>
+  </ul>
+  <p>
+    Si un curso ya fue indexado por SAIPA, no hace falta volver a indexarlo para EVAL-IA — y
+    viceversa. El material en ChromaDB es compartido automáticamente.
+  </p>
+
+  <div class="callout note">
+    <strong>INSTALACIÓN</strong>
+    Este manual asume que EVAL-IA ya está instalado y el Setup Wizard completado. Para la
+    instalación inicial vea el <em>Manual de Instalación EVAL-IA v0.4.8</em>.
+  </div>
+
+  <h2 class="section-h2" id="s1-5">1.5 Convenciones del documento</h2>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead><tr><th style="width:25%;">Elemento</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>Botón</kbd></td><td>Tecla o botón a pulsar en la interfaz.</td></tr>
+        <tr><td><em>Menú → Submenú</em></td><td>Ruta de navegación dentro de Moodle.</td></tr>
+        <tr><td><span class="grade-band high">ALTA</span> <span class="grade-band med">MEDIA</span> <span class="grade-band low">BAJA</span></td><td>Bandas de calificación usadas en los reportes institucionales.</td></tr>
+        <tr><td>💡 Tip</td><td>Consejo útil pero no crítico.</td></tr>
+        <tr><td>⚠ Advertencia</td><td>Situación a evitar o requisito importante.</td></tr>
+        <tr><td>✓ OK</td><td>Resultado esperado de una acción correcta.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ 2: PRIMEROS PASOS -->
+<div class="page-break"></div>
+<section id="s2">
+  <h1 class="section-h1">2. Primeros pasos</h1>
+
+  <h2 class="section-h2" id="s2-1">2.1 Acceso a EVAL-IA</h2>
+  <p>
+    EVAL-IA vive dentro de Moodle. Ingrese con su usuario habitual. Una vez en un curso donde
+    tenga rol <em>editingteacher</em>, el panel docente está en:
+  </p>
+<pre><code>https://su-moodle.edu/local/evalia/teacher.php?courseid={ID}</code></pre>
+  <p>
+    También es accesible desde el bloque lateral EVAL-IA si el administrador lo agregó al curso,
+    o desde el menú <em>Course administration → EVAL-IA</em>.
+  </p>
+
+  <h2 class="section-h2" id="s2-2">2.2 Verificación rápida antes de empezar</h2>
+  <p>Antes de generar su primera rúbrica conviene verificar tres cosas:</p>
+  <ol class="steps">
+    <li>Que el curso tenga material didáctico subido (páginas, PDFs, libros). Sin material, la IA no puede generar nada con contexto real.</li>
+    <li>Que el estado del motor sea saludable — el panel muestra un indicador verde/rojo en la esquina superior.</li>
+    <li>Que su usuario tenga la capacidad <code>local/evalia:manage</code>. Si ve "Acceso denegado", contacte al administrador.</li>
+  </ol>
+
+  <div class="callout ok">
+    <strong>OK</strong>
+    Si las tres verificaciones pasan, ya puede ir directo a §3.1 e indexar el curso.
+  </div>
+
+  <h2 class="section-h2" id="s2-3">2.3 El panel docente de un vistazo</h2>
+  <p>El panel docente está organizado en pestañas, cada una cubriendo una fase del flujo:</p>
+  <div class="table-wrapper">
+    <table class="std">
+      <thead><tr><th style="width:25%;">Pestaña</th><th>Qué hace</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Indexación</strong></td><td>Lista el material del curso y permite disparar la indexación en ChromaDB.</td></tr>
+        <tr><td><strong>Rúbricas</strong></td><td>Genera, edita y guarda rúbricas (manuales o asistidas por IA).</td></tr>
+        <tr><td><strong>Preguntas</strong></td><td>Banco de preguntas derivado de rúbricas o agregadas a mano.</td></tr>
+        <tr><td><strong>Exámenes</strong></td><td>Crea, publica y cierra exámenes con asignación única por estudiante.</td></tr>
+        <tr><td><strong>Corrección</strong></td><td>Corrige respuestas con IA (para ensayos) o manualmente.</td></tr>
+        <tr><td><strong>Legajos</strong></td><td>Observaciones pedagógicas por alumno, exportables a CSV.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Además, en la esquina inferior derecha aparece el <strong>Asistente EVAL-IA</strong> 🤖
+    como botón flotante arrastrable. Lo veremos en §3.8.
+  </p>
+</section>
+
+<!-- ============================================================ 3: GUÍA DOCENTE -->
+<div class="page-break"></div>
+<section id="s3">
+  <h1 class="section-h1">3. Guía del docente</h1>
+
+  <p>
+    Esta es la sección más extensa del manual — recorre el ciclo completo de evaluación
+    asistida, paso por paso, en el orden natural en que un docente lo ejecutaría.
+  </p>
+
+  <figure class="diagram">
+    <div class="mermaid">
+flowchart LR
+  A[1 Indexar] --> B[2 Rúbrica IA]
+  B --> C[3 Preguntas]
+  C --> D[4 Examen]
+  D --> E[5 Corrección]
+  E --> F[6 Gradebook]
+    </div>
+    <figcaption>Figura 9. Flujo completo del docente en EVAL-IA (6 pasos).</figcaption>
+  </figure>
+
+  <h2 class="section-h2" id="s3-1">3.1 Indexar el material del curso</h2>
+  <p>
+    EVAL-IA solo puede trabajar con material que ha sido <em>indexado</em> — es decir,
+    procesado y guardado en una base de datos vectorial que el motor de IA puede consultar. Si
+    no hay material indexado, las rúbricas y preguntas que genere la IA serán genéricas o
+    directamente fallarán.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_1_indexar.png" alt="Panel de indexación">
+    <figcaption>Figura 1. Panel de indexación mostrando el material del curso.</figcaption>
+  </figure>
+
+  <p>Para indexar:</p>
+  <ol class="steps">
+    <li>Ingrese al panel docente y abra la pestaña <em>Indexación</em>.</li>
+    <li>Revise la lista: cada recurso del curso aparece con su estado (<em>pendiente</em>, <em>indexado</em>, <em>error</em>).</li>
+    <li>Click en <kbd>Indexar curso</kbd> para procesar todo el material pendiente.</li>
+    <li>Espere. Cada recurso toma entre 2 y 30 segundos según el tamaño. La página muestra el progreso.</li>
+    <li>Cuando finaliza, los recursos pasan a estado <em>indexado</em> con el número de fragmentos generados.</li>
+  </ol>
+
+  <div class="callout note">
+    <strong>QUÉ SE INDEXA Y QUÉ NO</strong>
+    Se indexan: páginas (Page), archivos PDF/DOCX/TXT/MD, libros (Book) y etiquetas (Label).
+    No se indexan: videos, PDFs escaneados sin OCR, enlaces externos, foros ni wikis.
+  </div>
+
+  <div class="callout tip">
+    <strong>TIP</strong>
+    Si agrega material nuevo al curso después de indexar, vuelva al panel y re-indexe — solo
+    los recursos nuevos se procesarán (los anteriores quedan cacheados).
+  </div>
+
+  <h2 class="section-h2" id="s3-2">3.2 Generar una rúbrica con IA</h2>
+  <p>
+    Una <strong>rúbrica</strong> es una tabla que define criterios de evaluación y niveles de
+    desempeño. EVAL-IA puede generarla en segundos a partir del material indexado.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_2_rubrica.png" alt="Editor de rúbrica">
+    <figcaption>Figura 2. Editor de rúbrica generada por IA.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Abra la pestaña <em>Rúbricas</em> y haga clic en <kbd>Generar con IA</kbd>.</li>
+    <li>Complete el formulario:
+      <ul>
+        <li><strong>Alcance</strong>: curso completo, unidad específica o tema libre.</li>
+        <li><strong>Fuentes</strong> (opcional): lista de recursos a considerar. Si no selecciona ninguno, usa todo el material indexado.</li>
+        <li><strong>Cantidad de criterios</strong>: típicamente 4 a 8. Menos puede resultar superficial; más se vuelve inmanejable.</li>
+        <li><strong>Niveles de desempeño</strong>: por defecto 4 (insuficiente / básico / competente / avanzado). Configurable.</li>
+      </ul>
+    </li>
+    <li>Click en <kbd>Generar</kbd>. En 5 a 60 segundos aparece la rúbrica editable.</li>
+    <li>Revise cada celda. Puede modificar libremente el texto, borrar criterios, agregar nuevos, o regenerar solo una celda que no le convenga.</li>
+    <li>Guarde con <kbd>Guardar rúbrica</kbd>. Le pedirá un nombre (ej. "Parcial 1 — Unidades 1 y 2").</li>
+  </ol>
+
+  <div class="callout warn">
+    <strong>IMPORTANTE</strong>
+    La IA genera una <em>propuesta</em>. La rúbrica final siempre es responsabilidad del
+    docente. Revise y edite antes de guardar — no publique rúbricas sin leer.
+  </div>
+
+  <h2 class="section-h2" id="s3-3">3.3 Crear el banco de preguntas</h2>
+  <p>
+    Con una rúbrica guardada, el siguiente paso es generar preguntas que evalúen cada criterio.
+    EVAL-IA soporta cinco tipos:
+  </p>
+
+  <div class="table-wrapper">
+    <table class="std">
+      <thead>
+        <tr><th>Tipo</th><th>Corrección</th><th>Cuándo usarla</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Selección múltiple</td><td>Automática</td><td>Conceptos con una única respuesta correcta.</td></tr>
+        <tr><td>Verdadero/Falso</td><td>Automática</td><td>Afirmaciones factuales del material.</td></tr>
+        <tr><td>Numérica</td><td>Automática con tolerancia</td><td>Cálculos matemáticos, conversiones, valores.</td></tr>
+        <tr><td>Respuesta corta</td><td>Automática (comparación)</td><td>Definiciones cortas, fechas, nombres.</td></tr>
+        <tr><td>Ensayo</td><td>IA + validación docente</td><td>Análisis, síntesis, razonamiento abierto.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_3_preguntas.png" alt="Banco de preguntas">
+    <figcaption>Figura 3. Banco de preguntas clasificado por tipo.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>En la pestaña <em>Preguntas</em>, click en <kbd>Generar desde rúbrica</kbd>.</li>
+    <li>Elija la rúbrica fuente, el tipo de pregunta y la cantidad por criterio (ej. 3 MC + 1 ensayo por cada criterio).</li>
+    <li>La IA genera las preguntas. Aparecen marcadas como <em>borrador</em> hasta que usted las revise.</li>
+    <li>Abra cada una, corrija lo que sea necesario, y márquela como <em>aprobada</em>.</li>
+    <li>Las preguntas aprobadas quedan disponibles para armar exámenes.</li>
+  </ol>
+
+  <div class="callout tip">
+    <strong>TIP</strong>
+    Para evitar sesgo del modelo, revise especialmente los distractores (opciones incorrectas)
+    de las preguntas MC. La IA a veces genera distractores demasiado obvios o demasiado ambiguos.
+  </div>
+
+  <h2 class="section-h2" id="s3-4">3.4 Configurar y publicar un examen</h2>
+  <p>
+    Un <strong>examen EVAL-IA</strong> selecciona un subconjunto del banco y lo asigna a cada
+    alumno de forma única — es decir, dos alumnos nunca reciben exactamente el mismo set de
+    preguntas, lo que reduce la posibilidad de copia.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_4_examenes.png" alt="Panel de exámenes">
+    <figcaption>Figura 4. Panel de exámenes con asignación única por estudiante.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Pestaña <em>Exámenes</em> → botón <kbd>Nuevo examen</kbd>.</li>
+    <li>Complete:
+      <ul>
+        <li>Nombre visible del examen (ej. "Parcial 1 — Abril 2026").</li>
+        <li>Cantidad total de preguntas y distribución por tipo (ej. 10 MC + 2 ensayos).</li>
+        <li>Duración máxima (ej. 90 minutos).</li>
+        <li>Ventana de disponibilidad (desde / hasta — los alumnos solo pueden rendirlo en ese rango).</li>
+        <li>Puntaje total y pesos por tipo si desea ajustarlos.</li>
+      </ul>
+    </li>
+    <li>Click en <kbd>Generar asignaciones</kbd>: EVAL-IA crea un set único por cada alumno matriculado como <em>student</em>.</li>
+    <li>Revise la previsualización de un par de alumnos para verificar que los sets se ven razonables.</li>
+    <li>Click en <kbd>Publicar</kbd>. El examen queda visible para los alumnos dentro de su ventana.</li>
+  </ol>
+
+  <div class="callout note">
+    <strong>UN ALUMNO, UN SET</strong>
+    Una vez publicado, los sets quedan congelados. Si cambia las preguntas del banco después de
+    publicar, los exámenes ya asignados conservan sus preguntas originales para garantizar
+    equidad.
+  </div>
+
+  <h2 class="section-h2" id="s3-5">3.5 Corregir con asistencia de IA</h2>
+  <p>
+    Las preguntas objetivas (MC, V/F, numéricas, respuesta corta) se corrigen automáticamente.
+    Las preguntas de <strong>ensayo</strong> requieren un paso adicional: EVAL-IA le presenta
+    al docente una nota preliminar propuesta por la IA, con justificación y citas al material
+    indexado. El docente valida o ajusta.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_5_correccion.png" alt="Panel de corrección">
+    <figcaption>Figura 5. Panel de corrección asistida por IA.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Cuando el examen termina su ventana, abra la pestaña <em>Corrección</em>.</li>
+    <li>Verá una lista de alumnos con el estado de su corrección (<em>automática completa</em>, <em>pendiente ensayo</em>, <em>validada</em>).</li>
+    <li>Click en un alumno con ensayos pendientes. Para cada respuesta de ensayo, EVAL-IA muestra:
+      <ul>
+        <li>El texto del alumno.</li>
+        <li>La nota preliminar sugerida por la IA (0 a 100).</li>
+        <li>La justificación: qué criterios de la rúbrica cumple o no, con citas al material del curso.</li>
+      </ul>
+    </li>
+    <li>Usted tiene tres opciones por respuesta:
+      <ul>
+        <li><kbd>Aceptar</kbd> — usa la nota de la IA tal cual.</li>
+        <li><kbd>Ajustar</kbd> — modifica la nota con un slider y agrega un comentario propio.</li>
+        <li><kbd>Rechazar y corregir manualmente</kbd> — ignora la propuesta y califica a mano.</li>
+      </ul>
+    </li>
+    <li>Cuando todas las respuestas de un alumno están validadas, su corrección queda en estado <em>validada</em>.</li>
+  </ol>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_8_ensayo_ia.png" alt="Corrección IA de ensayo">
+    <figcaption>Figura 8. Corrección de ensayo por IA con justificación y citas.</figcaption>
+  </figure>
+
+  <div class="callout warn">
+    <strong>LA NOTA FINAL NUNCA ES AUTOMÁTICA</strong>
+    EVAL-IA exige la validación explícita del docente antes de publicar. Esto es un requisito
+    pedagógico y de auditoría: el LLM propone, el docente dispone.
+  </div>
+
+  <h2 class="section-h2" id="s3-6">3.6 Publicar notas al gradebook</h2>
+  <p>
+    Con todos los alumnos en estado <em>validada</em>, el botón <kbd>Publicar al gradebook</kbd>
+    envía las notas finales al libro de calificaciones del curso como un ítem manual. El ítem
+    queda etiquetado con <code>idnumber = evalia_exam_{id}</code> para trazabilidad.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_7_gradebook.png" alt="Gradebook">
+    <figcaption>Figura 7. Gradebook de Moodle con el ítem EVAL-IA publicado.</figcaption>
+  </figure>
+
+  <p>Después de publicar:</p>
+  <ul>
+    <li>Los alumnos ven su nota en la página estándar de calificaciones de Moodle.</li>
+    <li>La nota se integra al cálculo de la categoría del curso como cualquier otro ítem manual.</li>
+    <li>Si detecta un error posterior, puede des-publicar, corregir y re-publicar — el ítem del gradebook se actualiza.</li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>TIP</strong>
+    Configure la categoría del gradebook y su peso <em>antes</em> de publicar por primera vez.
+    Así el ítem nuevo hereda el peso correcto automáticamente.
+  </div>
+
+  <h2 class="section-h2" id="s3-7">3.7 Legajos del estudiante y observaciones</h2>
+  <p>
+    Más allá de las notas, el docente puede llevar un <strong>legajo pedagógico</strong> por
+    alumno con observaciones libres (no se envían al LLM ni se publican al gradebook). Es un
+    espacio privado del docente para capturar información cualitativa útil en reuniones
+    académicas o informes de seguimiento.
+  </p>
+
+  <figure>
+    <img src="../moodle-plugins/local_evalia/pix/screenshots/EVALIA_6_legajos.png" alt="Legajo">
+    <figcaption>Figura 6. Legajo del estudiante con observaciones pedagógicas.</figcaption>
+  </figure>
+
+  <p>Las observaciones se clasifican en tres categorías:</p>
+  <ul>
+    <li><strong>Académica</strong> — relacionada con el rendimiento o comprensión de los temas.</li>
+    <li><strong>Conductual</strong> — participación, comportamiento en clase, interacción con pares.</li>
+    <li><strong>Seguimiento</strong> — eventos particulares a revisar (ausencias, salud, personales).</li>
+  </ul>
+  <p>
+    Desde la pestaña <em>Legajos</em> puede exportar todo el legajo del curso a un archivo CSV
+    listo para compartir con el asesor académico o el equipo de coordinación.
+  </p>
+
+  <div class="callout note">
+    <strong>PRIVACIDAD DEL LEGAJO</strong>
+    Las observaciones son visibles únicamente para quien tenga rol <em>editingteacher</em> o
+    superior en el curso. Los alumnos no ven su propio legajo, y tampoco el chat del asistente
+    EVAL-IA ni el motor de IA acceden a su contenido.
+  </div>
+
+  <h2 class="section-h2" id="s3-8">3.8 Asistente EVAL-IA (chat flotante)</h2>
+  <p>
+    En la esquina inferior derecha del panel docente aparece un botón flotante 🤖 — es el
+    <strong>Asistente EVAL-IA</strong>. Al hacer clic se abre un panel de chat con una IA
+    especializada en guiar al docente a través del flujo del plugin.
+  </p>
+
+  <p>Ejemplos de preguntas útiles:</p>
+  <ul>
+    <li>"¿Cómo genero una rúbrica solo para la unidad 3 sin incluir el resto?"</li>
+    <li>"¿Qué tipo de pregunta conviene para evaluar análisis crítico?"</li>
+    <li>"¿Por qué mi examen publicado no aparece en el gradebook?"</li>
+    <li>"¿Cómo exporto el CSV de legajos?"</li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>POSICIÓN PERSISTENTE</strong>
+    El botón es arrastrable. Si lo mueve a otra esquina, su posición queda guardada en el
+    navegador y reaparece ahí en la próxima visita.
+  </div>
+
+  <div class="callout note">
+    <strong>QUÉ SABE Y QUÉ NO</strong>
+    El asistente conoce la documentación del plugin y las buenas prácticas del flujo EVAL-IA.
+    No tiene acceso en tiempo real a los datos de sus alumnos ni de sus cursos — es un guía
+    procedimental, no un analista.
+  </div>
+</section>
+
+<!-- ============================================================ 4: ESTUDIANTE -->
+<div class="page-break"></div>
+<section id="s4">
+  <h1 class="section-h1">4. Guía del estudiante</h1>
+
+  <p>
+    Desde la perspectiva del alumno, EVAL-IA se siente como un cuestionario más de Moodle, con
+    algunas particularidades que conviene conocer.
+  </p>
+
+  <h2 class="section-h2" id="s4-1">4.1 Rendir un examen EVAL-IA</h2>
+  <ol class="steps">
+    <li>Su docente publicará el examen y usted lo verá como una actividad nueva en el curso, dentro de la ventana de disponibilidad que configuró.</li>
+    <li>Click en el nombre del examen. Se muestra una pantalla de bienvenida con: duración, cantidad de preguntas, tipos incluidos, instrucciones.</li>
+    <li>Click en <kbd>Comenzar examen</kbd>. El cronómetro arranca.</li>
+    <li>Responda las preguntas una por una o en el orden que prefiera.</li>
+    <li>Cuando haya terminado, click en <kbd>Enviar examen</kbd>. Verá una pantalla de confirmación.</li>
+  </ol>
+
+  <div class="callout warn">
+    <strong>UNA SOLA OPORTUNIDAD POR DEFECTO</strong>
+    La mayoría de los exámenes EVAL-IA están configurados para un único intento. Una vez
+    enviado, no puede volver a abrirlo ni modificar respuestas. Si por un problema técnico debe
+    reabrirlo, contacte a su docente.
+  </div>
+
+  <h2 class="section-h2" id="s4-2">4.2 Navegación durante el examen</h2>
+  <ul>
+    <li>Puede moverse entre preguntas con los botones <kbd>Anterior</kbd> y <kbd>Siguiente</kbd>.</li>
+    <li>Un panel lateral muestra el estado de cada pregunta: respondida, sin responder, marcada para revisar.</li>
+    <li>Use la marca <em>"Revisar más tarde"</em> si quiere volver a una pregunta antes de enviar.</li>
+    <li>El cronómetro de la parte superior avisa cuando quedan 10 minutos y cuando queda 1 minuto.</li>
+    <li>Si se queda sin tiempo, el examen se envía automáticamente con lo que haya respondido hasta ese momento.</li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>TIP</strong>
+    Para las preguntas de ensayo, conviene escribir primero una respuesta breve y completa antes
+    de pasar a las siguientes, y volver al final si queda tiempo para ampliarla. Así evita que
+    una respuesta larga quede sin terminar por falta de tiempo.
+  </div>
+
+  <h2 class="section-h2" id="s4-3">4.3 Ver el resultado y la devolución</h2>
+  <p>
+    Después de que su docente termine la corrección y publique las notas, usted verá el
+    resultado en:
+  </p>
+  <ul>
+    <li>El libro de calificaciones del curso (<em>Grades</em>) — la nota numérica.</li>
+    <li>La página del examen dentro de EVAL-IA — el detalle de cada pregunta, su respuesta y, si su docente lo habilitó, la justificación de la corrección.</li>
+  </ul>
+  <p>
+    Para preguntas de ensayo corregidas con asistencia de IA, la justificación que usted ve es
+    la que el docente validó — no la propuesta original del modelo.
+  </p>
+
+  <h2 class="section-h2" id="s4-4">4.4 Qué datos procesa EVAL-IA sobre mí</h2>
+  <p>EVAL-IA procesa:</p>
+  <ul>
+    <li>Sus respuestas a los exámenes del plugin (guardadas en la base de datos de Moodle).</li>
+    <li>Para preguntas de ensayo: el texto de sus respuestas se envía al motor de IA para generar la corrección preliminar. No se envía su nombre, email ni información de identificación — solo el contenido textual de la respuesta.</li>
+    <li>Las notas finales, una vez publicadas al gradebook, forman parte de sus datos académicos normales de Moodle.</li>
+  </ul>
+  <p>EVAL-IA <strong>no</strong> procesa:</p>
+  <ul>
+    <li>Las observaciones del legajo (solo las ve el docente).</li>
+    <li>Sus datos de otros cursos o actividades fuera de EVAL-IA.</li>
+    <li>Su actividad en SAIPA (si la institución también lo tiene instalado) — son sistemas con propósitos separados.</li>
+  </ul>
+  <p>
+    Puede ejercer sus derechos ARCO / GDPR a través del sistema de privacidad estándar de
+    Moodle: <em>Preferences → Privacy and policies → Request user data</em>.
+  </p>
+</section>
+
+<!-- ============================================================ 5: ASESOR -->
+<div class="page-break"></div>
+<section id="s5">
+  <h1 class="section-h1">5. Guía del asesor académico</h1>
+
+  <p>
+    Esta sección es para el rol <em>manager</em> o equivalente, responsable del seguimiento
+    académico a nivel institucional (no de un curso en particular).
+  </p>
+
+  <h2 class="section-h2" id="s5-1">5.1 Observar resultados a nivel institucional</h2>
+  <p>
+    EVAL-IA no tiene un dashboard institucional propio tan extenso como el de SAIPA. Los
+    asesores pueden:
+  </p>
+  <ul>
+    <li>Acceder a cualquier curso en el que tengan capacidad <code>local/evalia:viewall</code>.</li>
+    <li>Revisar las rúbricas generadas, los bancos de preguntas, los exámenes publicados y los resultados.</li>
+    <li>Ver las notas agregadas del curso a través del gradebook estándar de Moodle.</li>
+    <li>Leer los legajos pedagógicos de los alumnos (solo lectura — la edición queda reservada al docente del curso).</li>
+  </ul>
+
+  <div class="callout note">
+    <strong>CAPACIDAD REQUERIDA</strong>
+    Para acceder en modo de solo lectura a múltiples cursos, su rol debe tener la capacidad
+    <code>local/evalia:viewall</code>. Por defecto está asignada al rol <em>manager</em>; si
+    usted tiene otro rol personalizado, pida al administrador que se la agregue.
+  </div>
+
+  <h2 class="section-h2" id="s5-2">5.2 Exportar legajos y observaciones</h2>
+  <p>
+    Desde la pestaña <em>Legajos</em> de cada curso, el asesor puede exportar a CSV las
+    observaciones pedagógicas del docente. El CSV incluye:
+  </p>
+  <ul>
+    <li>Nombre del alumno.</li>
+    <li>Fecha de cada observación.</li>
+    <li>Categoría (académica / conductual / seguimiento).</li>
+    <li>Texto completo.</li>
+    <li>Autor (docente que la registró).</li>
+  </ul>
+  <p>Útil para:</p>
+  <ul>
+    <li>Preparar reuniones de seguimiento académico con el equipo docente.</li>
+    <li>Generar informes institucionales trimestrales.</li>
+    <li>Alimentar un sistema externo de gestión académica (integración manual).</li>
+  </ul>
+
+  <h2 class="section-h2" id="s5-3">5.3 Uso cruzado con SAIPA</h2>
+  <p>
+    Si su institución tiene <strong>ambos plugins</strong> (SAIPA y EVAL-IA), el dashboard del
+    asesor de SAIPA (<code>/local/saipa/advisor.php</code>) muestra información cruzada:
+  </p>
+  <ul>
+    <li>Alumnos con riesgo alto (SAIPA) que también tienen notas bajas en EVAL-IA — señal muy fuerte para intervenir.</li>
+    <li>Cursos con mayor uso combinado de ambos plugins — indicador de docentes que adoptaron el stack completo.</li>
+    <li>Tendencia de engagement general de la institución.</li>
+  </ul>
+  <p>
+    Si solo tiene EVAL-IA, esta vista cruzada no está disponible; use el gradebook estándar de
+    Moodle para los reportes agregados.
+  </p>
+</section>
+
+<!-- ============================================================ 6: ADMINISTRADOR -->
+<div class="page-break"></div>
+<section id="s6">
+  <h1 class="section-h1">6. Guía del administrador (uso diario)</h1>
+
+  <p>
+    Esta sección cubre las tareas operativas que el administrador del sitio realiza con
+    EVAL-IA una vez instalado y en producción. Para la instalación inicial, ver el
+    <em>Manual de Instalación EVAL-IA</em>.
+  </p>
+
+  <h2 class="section-h2" id="s6-1">6.1 Monitoreo del motor</h2>
+  <p>
+    EVAL-IA depende del motor <code>saipa-engine</code> para todas sus operaciones de IA. Si el
+    motor está caído, EVAL-IA sigue mostrando su interfaz pero todas las acciones de IA
+    (generar rúbrica, preguntas, corregir ensayos) fallarán.
+  </p>
+  <p>Verificación rápida:</p>
+<pre><code># Desde el servidor Moodle
+curl -s http://localhost:8052/health | python3 -m json.tool</code></pre>
+  <p>Debe devolver:</p>
+<pre><code>{
+  "status": "ok",
+  "components": { "ollama": "ok", "chromadb": "ok", "moodle": "ok" }
+}</code></pre>
+  <p>
+    Si cualquier componente no está <code>ok</code>, revise los logs del engine con
+    <code>docker logs saipa-saipa-engine --tail 50</code>.
+  </p>
+
+  <h2 class="section-h2" id="s6-2">6.2 Re-indexación masiva</h2>
+  <p>
+    Cuando el administrador necesita re-procesar todos los cursos (por ejemplo tras actualizar
+    el embedder del motor, o después de una migración), puede disparar una re-indexación
+    masiva desde CLI:
+  </p>
+<pre><code>docker exec saipa-moodle php /var/www/html/local/evalia/cli/reindex_all.php --force</code></pre>
+  <p>
+    El comando recorre todos los cursos con contenido EVAL-IA y los re-indexa uno por uno.
+    Pueden tardar varias horas según el tamaño de la institución — ejecútelo fuera de horario de
+    clases.
+  </p>
+
+  <h2 class="section-h2" id="s6-3">6.3 Gestión de permisos</h2>
+  <p>Las capacidades de EVAL-IA se gestionan desde el sistema estándar de roles de Moodle:</p>
+  <ul>
+    <li><em>Site administration → Users → Permissions → Define roles</em>.</li>
+    <li>Edite el rol objetivo (ej. <em>editingteacher</em>) y busque las capacidades que empiezan con <code>local/evalia:</code>.</li>
+    <li>Las capacidades relevantes son: <code>use</code>, <code>manage</code>, <code>publish</code>, <code>viewall</code>, <code>admin</code>.</li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>BUENA PRÁCTICA</strong>
+    Si tiene un rol personalizado de "profesor asistente" que ayuda a corregir pero no debe
+    publicar notas al gradebook, quítele la capacidad <code>local/evalia:publish</code> pero
+    déjele <code>local/evalia:manage</code>.
+  </div>
+</section>
+
+<!-- ============================================================ 7: FAQ -->
+<div class="page-break"></div>
+<section id="s7">
+  <h1 class="section-h1">7. Preguntas frecuentes</h1>
+
+  <h3 class="section-h3">¿EVAL-IA reemplaza al docente como corrector?</h3>
+  <p>
+    No. Las preguntas objetivas (MC, V/F, numéricas) se corrigen automáticamente, igual que
+    cualquier cuestionario de Moodle. Las preguntas de ensayo reciben una <em>propuesta</em>
+    de corrección de la IA que el docente debe validar o ajustar antes de publicar. La nota
+    final siempre es responsabilidad del docente.
+  </p>
+
+  <h3 class="section-h3">¿La IA puede calificar mal un ensayo?</h3>
+  <p>
+    Sí, puede — por eso EVAL-IA exige la revisión del docente antes de publicar. Los casos más
+    frecuentes de corrección incorrecta son: respuestas correctas pero muy breves (el modelo
+    las subvalora), respuestas con ironía o metáfora (el modelo las interpreta literalmente) y
+    respuestas que usan terminología no presente en el material indexado.
+  </p>
+
+  <h3 class="section-h3">¿Puedo editar una rúbrica después de generarla con IA?</h3>
+  <p>
+    Sí, completamente. La rúbrica generada es un punto de partida editable: puede modificar
+    cada celda, agregar o borrar criterios, cambiar los niveles de desempeño y guardarla con
+    sus cambios. La próxima regeneración no sobrescribe las rúbricas guardadas.
+  </p>
+
+  <h3 class="section-h3">¿Qué pasa si agrego material al curso después de indexar?</h3>
+  <p>
+    El material nuevo no está disponible para la IA hasta que usted re-indexe el curso. Vuelva
+    a la pestaña <em>Indexación</em> y haga clic en <kbd>Indexar curso</kbd>. Solo los
+    recursos nuevos se procesan — los anteriores quedan en caché.
+  </p>
+
+  <h3 class="section-h3">¿Los alumnos pueden copiarse entre sí?</h3>
+  <p>
+    EVAL-IA reduce significativamente el riesgo de copia porque cada alumno recibe un set
+    único de preguntas extraídas del banco. Aun así, si dos preguntas diferentes evalúan el
+    mismo concepto, la copia parcial es técnicamente posible. Las preguntas de ensayo, al ser
+    respuestas únicas, son las más difíciles de copiar.
+  </p>
+
+  <h3 class="section-h3">¿Qué idiomas soporta la generación de rúbricas y preguntas?</h3>
+  <p>
+    Depende del modelo LLM configurado en el motor. Con <code>qwen2.5:14b</code> (el modelo por
+    defecto) la generación funciona muy bien en español e inglés, aceptablemente en portugués y
+    francés, y con calidad variable en otros idiomas. El idioma de salida suele coincidir con el
+    idioma del material indexado.
+  </p>
+
+  <h3 class="section-h3">¿Puedo usar EVAL-IA sin tener SAIPA instalado?</h3>
+  <p>
+    Sí. EVAL-IA es un plugin independiente. Solo necesita el motor <code>saipa-engine</code>
+    corriendo (compartido con SAIPA si también está instalado, o dedicado si no). Si su
+    institución solo adquirió EVAL-IA, siga el Manual de Instalación EVAL-IA — el escenario B
+    cubre el despliegue solo del motor sin el plugin SAIPA.
+  </p>
+
+  <h3 class="section-h3">¿Qué pasa con los exámenes si el motor de IA está caído?</h3>
+  <p>
+    Los exámenes ya publicados siguen funcionando: los alumnos pueden rendirlos y las
+    preguntas objetivas se corrigen automáticamente (no requieren el motor). Lo que no
+    funcionará sin el motor: generar nuevas rúbricas, generar preguntas y la corrección
+    asistida de ensayos. En ese caso, el docente siempre puede corregir manualmente.
+  </p>
+
+  <h3 class="section-h3">¿EVAL-IA funciona en la app móvil de Moodle?</h3>
+  <p>
+    El panel docente está optimizado para navegador web (escritorio o tablet). Los alumnos
+    pueden rendir exámenes desde la app móvil estándar de Moodle, con la misma experiencia que
+    cualquier otro cuestionario.
+  </p>
+</section>
+
+<!-- ============================================================ 8: GLOSARIO -->
+<div class="page-break"></div>
+<section id="s8">
+  <h1 class="section-h1">8. Glosario</h1>
+
+  <div class="table-wrapper">
+    <table class="std">
+      <thead><tr><th style="width:22%;">Término</th><th>Definición</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Asistente EVAL-IA</strong></td><td>Chat flotante (FAB) disponible en el panel docente como guía procedimental del flujo de trabajo del plugin.</td></tr>
+        <tr><td><strong>Banco de preguntas</strong></td><td>Conjunto de preguntas de un curso, clasificadas por tipo, aprobadas por el docente, listas para armar exámenes.</td></tr>
+        <tr><td><strong>ChromaDB</strong></td><td>Base de datos vectorial donde se guardan los fragmentos del material del curso indexados para búsqueda semántica.</td></tr>
+        <tr><td><strong>Corrección asistida</strong></td><td>Flujo donde la IA propone una nota preliminar para una respuesta de ensayo y el docente la valida, ajusta o rechaza.</td></tr>
+        <tr><td><strong>Distractor</strong></td><td>Opción incorrecta en una pregunta de selección múltiple, diseñada para parecer plausible sin ser correcta.</td></tr>
+        <tr><td><strong>Examen único</strong></td><td>Examen donde cada alumno recibe un set distinto del banco de preguntas, reduciendo la posibilidad de copia.</td></tr>
+        <tr><td><strong>Gradebook</strong></td><td>Libro de calificaciones estándar de Moodle. EVAL-IA publica los resultados finales como ítems manuales trazables.</td></tr>
+        <tr><td><strong>Indexación</strong></td><td>Proceso por el cual el material del curso se procesa y guarda en ChromaDB para que la IA pueda consultarlo.</td></tr>
+        <tr><td><strong>Legajo</strong></td><td>Registro privado del docente con observaciones pedagógicas cualitativas sobre un alumno, no publicado al gradebook ni enviado a la IA.</td></tr>
+        <tr><td><strong>LLM</strong></td><td>Modelo de lenguaje grande. Genera texto: redacta rúbricas, preguntas y correcciones de ensayo. EVAL-IA usa por defecto <code>qwen2.5:14b</code> vía Ollama.</td></tr>
+        <tr><td><strong>Nivel de desempeño</strong></td><td>Columna de una rúbrica que describe el grado de logro de un criterio (ej. insuficiente / básico / competente / avanzado).</td></tr>
+        <tr><td><strong>Ollama</strong></td><td>Runtime para correr modelos LLM localmente en el servidor de la institución, sin enviar datos a proveedores externos.</td></tr>
+        <tr><td><strong>RAG</strong></td><td>Retrieval-Augmented Generation. Técnica donde el LLM consulta primero la base vectorial (ChromaDB) antes de responder, para citar fuentes del material del curso y reducir "alucinaciones".</td></tr>
+        <tr><td><strong>Rúbrica</strong></td><td>Tabla que define criterios de evaluación y niveles de desempeño. EVAL-IA puede generarla con IA a partir del material indexado.</td></tr>
+        <tr><td><strong>Saipa-engine</strong></td><td>Servicio Python (FastAPI) que corre junto a Moodle y contiene la lógica de IA: RAG, generación, corrección. Compartido entre SAIPA y EVAL-IA.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="section-rule">
+
+  <p style="text-align: center; font-size: 9pt; color: var(--gray3); margin-top: 40px;">
+    Fin del Manual de Usuario de EVAL-IA v0.4.8 — Abril 2026<br>
+    Schaller &amp; Ponce — <em>Soluciones Educativas con Inteligencia Artificial</em><br>
+    dev@schaller-ponce.com.ar
+  </p>
+</section>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+
+</body>
+</html>
